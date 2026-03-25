@@ -250,13 +250,13 @@ def run() -> None:
     print(f"[Step 04] Base validation loss: {loss_base:.5f}")
 
     # ------------------------------------------------------------------
-    # Build allow_meta_structure (last 2 layers only)
+    # Build allow_meta_structure (last 3 layers only)
     # ------------------------------------------------------------------
     keys = list(base_model.state_structure.keys())
     allow_meta_structure = OrderedDict()
     n_layers = len(base_model.layers)
     included_keys = set()
-    for li in range(max(0, n_layers - 2), n_layers):
+    for li in range(max(0, n_layers - 3), n_layers):
         included_keys.add(f"layers.{li}.weight")
         included_keys.add(f"layers.{li}.bias")
 
