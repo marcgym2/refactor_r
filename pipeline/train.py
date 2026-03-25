@@ -270,7 +270,7 @@ def run() -> None:
     # Train meta-model
     # ------------------------------------------------------------------
     meta_mesa_parameter_size = 1
-    meta_allow_bias = True
+    meta_allow_bias = False
     meta_dropout = 0.0
     meta_init_mesa_range = 0
     meta_init_meta_range = 1
