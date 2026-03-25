@@ -9,10 +9,14 @@ Supports both the legacy single-universe run and a split flow:
 from __future__ import annotations
 
 import argparse
+from datetime import date
 from pathlib import Path
+
+import pandas as pd
 
 from pipeline import forecast, ingest, infer, portfolio, train, universe
 from pipeline.config import FORECASTS_DIR, resolve_train_start_date
+from pipeline.discovery.runner import run as run_discovery
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,18 +53,41 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _discovery_snapshot_is_usable(candidate_path: Path) -> bool:
+    if not candidate_path.exists():
+        return False
+
+    try:
+        candidates = pd.read_csv(candidate_path)
+    except Exception:
+        return False
+
+    if candidates.empty:
+        return False
+
+    required_market_columns = {"relative_volume", "dollar_volume", "market_cap"}
+    if not required_market_columns.issubset(candidates.columns):
+        return True
+
+    head = candidates.head(10)
+    market_ready = head[list(required_market_columns)].notna().all(axis=1)
+    minimum_ready = min(3, len(head))
+    return int(market_ready.sum()) >= minimum_ready
+
+
 def _resolve_latest_discovery_date(*, use_full_candidates: bool) -> str | None:
     prefix = "candidates_" if use_full_candidates else "top_candidates_"
     discovery_dir = Path(FORECASTS_DIR) / "discovery"
     if not discovery_dir.exists():
         return None
 
-    candidates = sorted(discovery_dir.glob(f"{prefix}*.csv"))
-    if not candidates:
-        return None
-
-    latest = candidates[-1].stem
-    return latest.removeprefix(prefix)
+    candidates = sorted(discovery_dir.glob(f"{prefix}*.csv"), reverse=True)
+    for candidate_path in candidates:
+        if not _discovery_snapshot_is_usable(candidate_path):
+            continue
+        latest = candidate_path.stem
+        return latest.removeprefix(prefix)
+    return None
 
 
 def _apply_default_run_arguments(args: argparse.Namespace) -> argparse.Namespace:
@@ -68,6 +95,23 @@ def _apply_default_run_arguments(args: argparse.Namespace) -> argparse.Namespace
         args.discovery_date = _resolve_latest_discovery_date(
             use_full_candidates=args.use_full_candidates,
         )
+    return args
+
+
+def _refresh_discovery_snapshot(args: argparse.Namespace) -> argparse.Namespace:
+    if args.train_universe != "m6" or args.candidate_file or args.discovery_date:
+        return args
+
+    run_date = date.today().isoformat()
+    try:
+        outputs = run_discovery(run_date=run_date)
+        top_candidates_path = Path(outputs["top_candidates_path"])
+        if not _discovery_snapshot_is_usable(top_candidates_path):
+            raise RuntimeError(f"discovery snapshot failed sanity checks: {top_candidates_path}")
+        args.discovery_date = run_date
+        print(f"[main] Refreshed discovery candidates → {top_candidates_path}")
+    except Exception as exc:
+        print(f"[main] Warning: discovery refresh failed for {run_date}: {exc}")
     return args
 
 
@@ -116,7 +160,9 @@ def _run_legacy_flow(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    args = _apply_default_run_arguments(build_parser().parse_args())
+    args = build_parser().parse_args()
+    args = _refresh_discovery_snapshot(args)
+    args = _apply_default_run_arguments(args)
 
     print("=" * 60)
     print("  Stock Ranking Pipeline — Python Refactor")
