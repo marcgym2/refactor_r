@@ -76,11 +76,26 @@ def latest_trade_date(ticker: str) -> date | None:
     return date.fromisoformat(row[0])
 
 
+def earliest_trade_date(ticker: str) -> date | None:
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT MIN(trade_date) FROM prices WHERE ticker = ?",
+            (ticker,),
+        ).fetchone()
+    if row is None or row[0] is None:
+        return None
+    return date.fromisoformat(row[0])
+
+
 def sync_ticker_history(ticker: str, start_date: date, lookback_days: int = 7) -> dict[str, object]:
+    first_cached = earliest_trade_date(ticker)
     last_cached = latest_trade_date(ticker)
-    if last_cached is None:
+    if last_cached is None or first_cached is None:
         fetch_start = start_date
         mode = "full"
+    elif start_date < first_cached:
+        fetch_start = start_date
+        mode = "backfill"
     else:
         fetch_start = max(start_date, last_cached - timedelta(days=lookback_days))
         mode = "incremental"
