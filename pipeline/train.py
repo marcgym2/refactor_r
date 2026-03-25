@@ -275,7 +275,7 @@ def run() -> None:
     meta_init_mesa_range = 0
     meta_init_meta_range = 1
     meta_epochs = 100
-    meta_patience = 5
+    meta_patience = 10
     meta_lr = [0.01, 0.001, 0.001, 0.0005, 0.0003, 0.0001, 0.00005]
     meta_minibatch_size = 4
 
