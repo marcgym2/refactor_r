@@ -21,6 +21,9 @@ SHORT_WEIGHT_MODE = "equal"
 LONG_MIN_SCORE: float | None = None
 SHORT_MIN_SCORE: float | None = None
 MIN_GROSS_EXPOSURE = 0.25
+EXPOSURE_MODE = "avg_selected_long_score"
+EXPOSURE_NEUTRAL_SCORE = 3.0
+EXPOSURE_DIVISOR = 0.4
 
 
 def _compute_score(frame: pd.DataFrame, metric: str) -> pd.Series:
@@ -113,6 +116,25 @@ def _apply_min_score(
     return [asset_id for asset_id in selected_ids if float(score_by_id.loc[asset_id]) >= min_score]
 
 
+def _resolve_target_gross_exposure(
+    *,
+    frame: pd.DataFrame,
+    selected_ids: list[str],
+    score: pd.Series,
+    base_target: float,
+) -> float:
+    if base_target <= 0.0:
+        return 0.0
+    if EXPOSURE_MODE == "fixed" or not selected_ids:
+        return float(base_target)
+    if EXPOSURE_MODE == "avg_selected_long_score":
+        score_by_id = pd.Series(score.to_numpy(dtype=float), index=frame["ID"].astype(str).values)
+        average_selected_score = float(score_by_id.loc[selected_ids].mean())
+        scaled_exposure = (average_selected_score - EXPOSURE_NEUTRAL_SCORE) / EXPOSURE_DIVISOR
+        return float(min(base_target, max(MIN_GROSS_EXPOSURE, scaled_exposure)))
+    raise ValueError(f"Unknown exposure mode: {EXPOSURE_MODE}")
+
+
 def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, object]]:
     required = {"ID", *RANK_COLUMNS}
     missing = sorted(required - set(forecast.columns))
@@ -143,8 +165,14 @@ def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, d
     short_ids = _apply_min_score(short_ids, frame=baseline, score=short_score, min_score=SHORT_MIN_SCORE)
 
     baseline["Decision"] = 0.0
-    long_gross = TARGET_GROSS_EXPOSURE if SHORT_SELECTION_COUNT == 0 else TARGET_GROSS_EXPOSURE * LONG_GROSS_SHARE
-    short_gross = 0.0 if SHORT_SELECTION_COUNT == 0 else TARGET_GROSS_EXPOSURE - long_gross
+    target_gross_exposure = _resolve_target_gross_exposure(
+        frame=baseline,
+        selected_ids=long_ids,
+        score=long_score,
+        base_target=TARGET_GROSS_EXPOSURE,
+    )
+    long_gross = target_gross_exposure if SHORT_SELECTION_COUNT == 0 else target_gross_exposure * LONG_GROSS_SHARE
+    short_gross = 0.0 if SHORT_SELECTION_COUNT == 0 else target_gross_exposure - long_gross
     long_weights = _allocate_weights(
         baseline,
         selected_ids=long_ids,
@@ -174,6 +202,7 @@ def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, d
         "short_score": SHORT_SCORE,
         "long_ids": long_ids,
         "short_ids": short_ids,
+        "target_gross_exposure": target_gross_exposure,
         "gross_exposure": gross_exposure,
         "net_exposure": float(baseline["Decision"].sum()),
         "meets_minimum_exposure": gross_exposure + 1e-12 >= MIN_GROSS_EXPOSURE,

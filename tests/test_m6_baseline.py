@@ -37,6 +37,24 @@ class M6BaselineTest(unittest.TestCase):
         self.assertEqual(len(summary["long_ids"]), 3)
         self.assertEqual(len(set(summary["long_ids"]) & set(summary["short_ids"])), 0)
 
+    def test_baseline_clips_low_conviction_exposure_to_minimum(self) -> None:
+        frame = pd.DataFrame(
+            {
+                "ID": ["A", "B", "C", "D", "E"],
+                "Rank1": [0.19, 0.18, 0.17, 0.21, 0.22],
+                "Rank2": [0.20, 0.20, 0.20, 0.20, 0.20],
+                "Rank3": [0.21, 0.21, 0.21, 0.20, 0.20],
+                "Rank4": [0.20, 0.20, 0.20, 0.20, 0.19],
+                "Rank5": [0.20, 0.21, 0.22, 0.19, 0.19],
+            }
+        )
+
+        submission, summary = build_m6_baseline_submission(frame)
+
+        self.assertAlmostEqual(float(submission["Decision"].abs().sum()), 0.25)
+        self.assertAlmostEqual(float(summary["gross_exposure"]), 0.25)
+        self.assertEqual(len(submission.loc[submission["Invest"]]), 3)
+
 
 if __name__ == "__main__":
     unittest.main()
