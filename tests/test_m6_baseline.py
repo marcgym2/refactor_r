@@ -23,18 +23,18 @@ class M6BaselineTest(unittest.TestCase):
         submission, summary = build_m6_baseline_submission(frame)
 
         invested = submission.loc[submission["Invest"]]
-        self.assertGreater(len(invested), 0)
-        self.assertLessEqual(float(submission["Decision"].abs().sum()), 1.0)
+        self.assertEqual(len(invested), 3)
+        self.assertAlmostEqual(float(submission["Decision"].abs().sum()), 1.0)
+        self.assertTrue((submission["Decision"] >= 0.0).all())
         self.assertEqual(
             set(submission.loc[submission["Decision"] > 0, "Position"]),
             {"Long"} if (submission["Decision"] > 0).any() else set(),
         )
-        self.assertEqual(
-            set(submission.loc[submission["Decision"] < 0, "Position"]),
-            {"Short"} if (submission["Decision"] < 0).any() else set(),
-        )
+        self.assertFalse((submission["Decision"] < 0).any())
         self.assertTrue((submission.loc[submission["Decision"] == 0, "Position"] == "Flat").all())
         self.assertTrue((submission["Invest"] == (submission["Decision"] != 0.0)).all())
+        self.assertEqual(summary["short_ids"], [])
+        self.assertEqual(len(summary["long_ids"]), 3)
         self.assertEqual(len(set(summary["long_ids"]) & set(summary["short_ids"])), 0)
 
 
