@@ -277,7 +277,7 @@ def run() -> None:
     meta_epochs = 100
     meta_patience = 5
     meta_lr = [0.01, 0.001, 0.001, 0.0005, 0.0003, 0.0001, 0.00005]
-    meta_minibatch_size = 100
+    meta_minibatch_size = 4
 
     meta_model = MetaModel(
         base_model,
