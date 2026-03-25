@@ -1,0 +1,50 @@
+{
+  "trending_symbols": [
+    {"symbol": "VCX", "watchlist_count": 9050},
+    {"symbol": "PLTR", "watchlist_count": 1535000},
+    {"symbol": "NVDA", "watchlist_count": 2565000},
+    {"symbol": "SOUN", "watchlist_count": 292000},
+    {"symbol": "QBTS", "watchlist_count": 45500}
+  ],
+  "streams": {
+    "VCX": [
+      {"id": "st-vcx-1", "author": "swingowl", "created_at": "2026-03-24T19:05:00Z", "body": "$VCX showing fresh attention and volume."},
+      {"id": "st-vcx-2", "author": "riskunit", "created_at": "2026-03-24T19:12:00Z", "body": "Seeing VCX light up on the tape."},
+      {"id": "st-vcx-3", "author": "microcapwatch", "created_at": "2026-03-24T19:22:00Z", "body": "$VCX mentions are accelerating."},
+      {"id": "st-vcx-4", "author": "breakoutatlas", "created_at": "2026-03-24T19:40:00Z", "body": "VCX setup is getting crowded fast."},
+      {"id": "st-vcx-5", "author": "flowharbor", "created_at": "2026-03-24T19:55:00Z", "body": "$VCX small cap but broadening fast."},
+      {"id": "st-vcx-6", "author": "swingowl2", "created_at": "2026-03-24T20:05:00Z", "body": "Another fresh VCX post."},
+      {"id": "st-vcx-7", "author": "riskunit2", "created_at": "2026-03-24T20:15:00Z", "body": "$VCX kept showing up all afternoon."},
+      {"id": "st-vcx-8", "author": "alphaedge", "created_at": "2026-03-24T20:20:00Z", "body": "VCX stream activity is real today."}
+    ],
+    "PLTR": [
+      {"id": "st-pltr-1", "author": "palantirbull", "created_at": "2026-03-24T18:50:00Z", "body": "$PLTR still trending."},
+      {"id": "st-pltr-2", "author": "quantalpha", "created_at": "2026-03-24T19:00:00Z", "body": "PLTR mentioned everywhere, as usual."},
+      {"id": "st-pltr-3", "author": "palantirbull2", "created_at": "2026-03-24T19:10:00Z", "body": "$PLTR daily check-in."},
+      {"id": "st-pltr-4", "author": "dataflow", "created_at": "2026-03-24T19:30:00Z", "body": "PLTR still active."},
+      {"id": "st-pltr-5", "author": "optiondesk", "created_at": "2026-03-24T19:45:00Z", "body": "$PLTR OTM calls again."},
+      {"id": "st-pltr-6", "author": "bigboard", "created_at": "2026-03-24T19:55:00Z", "body": "$PLTR chatter holding up."},
+      {"id": "st-pltr-7", "author": "flowalpha", "created_at": "2026-03-24T20:00:00Z", "body": "Watching PLTR into tomorrow."}
+    ],
+    "NVDA": [
+      {"id": "st-nvda-1", "author": "chipdesk", "created_at": "2026-03-24T18:40:00Z", "body": "$NVDA still a top mention."},
+      {"id": "st-nvda-2", "author": "semiscan", "created_at": "2026-03-24T18:58:00Z", "body": "NVDA continues to dominate mindshare."},
+      {"id": "st-nvda-3", "author": "deskflow", "created_at": "2026-03-24T19:14:00Z", "body": "$NVDA still strong."},
+      {"id": "st-nvda-4", "author": "semiscan2", "created_at": "2026-03-24T19:34:00Z", "body": "NVDA check."},
+      {"id": "st-nvda-5", "author": "chipdesk2", "created_at": "2026-03-24T19:49:00Z", "body": "$NVDA remains obvious."},
+      {"id": "st-nvda-6", "author": "macrochip", "created_at": "2026-03-24T20:09:00Z", "body": "More NVDA talk."}
+    ],
+    "SOUN": [
+      {"id": "st-soun-1", "author": "voicebeta", "created_at": "2026-03-24T19:03:00Z", "body": "$SOUN picked up again."},
+      {"id": "st-soun-2", "author": "voicebeta2", "created_at": "2026-03-24T19:19:00Z", "body": "SOUN seeing fresh bids."},
+      {"id": "st-soun-3", "author": "smallcapdesk", "created_at": "2026-03-24T19:51:00Z", "body": "$SOUN still active."},
+      {"id": "st-soun-4", "author": "voicebeta3", "created_at": "2026-03-24T20:11:00Z", "body": "SOUN posts are higher today."}
+    ],
+    "QBTS": [
+      {"id": "st-qbts-1", "author": "quantkid", "created_at": "2026-03-24T18:57:00Z", "body": "$QBTS worth watching."},
+      {"id": "st-qbts-2", "author": "quantkid2", "created_at": "2026-03-24T19:21:00Z", "body": "QBTS picked up mentions today."},
+      {"id": "st-qbts-3", "author": "deepq", "created_at": "2026-03-24T19:46:00Z", "body": "$QBTS volume + posts both up."},
+      {"id": "st-qbts-4", "author": "deepq2", "created_at": "2026-03-24T20:07:00Z", "body": "QBTS is showing more breadth."}
+    ]
+  }
+}

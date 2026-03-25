@@ -4,3 +4,6 @@ __pycache__/
 .uv-cache/
 data/market_data.sqlite
 data/market_data.sqlite-*
+data/discovery/history/
+data/discovery/raw_mentions/
+forecasts/discovery/
