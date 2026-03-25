@@ -117,7 +117,11 @@ def subset_tensor(
         row_map = {old: new for new, old in enumerate(sorted_rows)}
         new_indices[0] = torch.tensor([row_map[int(r)] for r in new_indices[0].tolist()], dtype=torch.long)
         new_values = values[mask]
-        return torch.sparse_coo_tensor(new_indices, new_values, (len(sorted_rows), x.size(1))).coalesce()
+        return torch.sparse_coo_tensor(
+            new_indices,
+            new_values,
+            (len(sorted_rows), x.size(1)),
+        ).coalesce()
     else:
         if isinstance(rows, list):
             rows = torch.tensor(rows, dtype=torch.long)

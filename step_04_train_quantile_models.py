@@ -73,6 +73,8 @@ def run() -> None:
         submission=SUBMISSION_INTERVALS, shifts=SHIFTS
     )
 
+    metadata_path = os.path.join(DATA_DIR, "tickers_metadata.parquet")
+    cleaned_data_path = os.path.join(DATA_DIR, "tickers_data_cleaned.pkl")
     precomputed_path = os.path.join(FEATURES_DIR, "features_raw.parquet")
     required_cols = {"Interval", "Ticker", "Shift", "IntervalStart", "IntervalEnd"}
 
@@ -91,9 +93,15 @@ def run() -> None:
     if os.path.exists(precomputed_path):
         stocks_aggr = pd.read_parquet(precomputed_path)
         missing = sorted(required_cols - set(stocks_aggr.columns))
-        if missing or stocks_aggr.empty:
+        cache_stale = any(
+            os.path.getmtime(path) > os.path.getmtime(precomputed_path)
+            for path in [metadata_path, cleaned_data_path]
+            if os.path.exists(path)
+        )
+        if missing or stocks_aggr.empty or cache_stale:
             print(
-                f"[Step 04] Cached features invalid (missing: {missing}, rows: {len(stocks_aggr)}). Regenerating."
+                "[Step 04] Cached features invalid or stale "
+                f"(missing: {missing}, rows: {len(stocks_aggr)}, stale: {cache_stale}). Regenerating."
             )
             stocks_aggr = _generate_and_cache()
     else:
@@ -170,7 +178,12 @@ def run() -> None:
     col_idx = torch.tensor(tickers.codes, dtype=torch.long)
     indices = torch.stack([row_idx, col_idx])
     values = torch.ones(len(tickers))
-    xtype = torch.sparse_coo_tensor(indices, values, (len(tickers), len(tickers.categories))).coalesce()
+    torch.sparse.check_sparse_tensor_invariants.disable()
+    xtype = torch.sparse_coo_tensor(
+        indices,
+        values,
+        (len(tickers), len(tickers.categories)),
+    ).coalesce()
 
     # Split
     y_train = y_tensor[train_rows]

@@ -33,14 +33,7 @@ def main() -> None:
     import step_09_generate_portfolio
     step_09_generate_portfolio.run()
 
-    # Step 7: (Optional) Ticker Correlation + Clustering Analysis
-    import step_07_ticker_correlation_analysis
-    step_07_ticker_correlation_analysis.run()
-
-    # Step 8: (Optional) Launch Streamlit Dashboard
-    #         Run separately via: streamlit run step_08_ticker_analysis_dashboard.py
     print("\n[main] ✅ Pipeline complete.")
-    print("[main] To launch the dashboard:  streamlit run step_08_ticker_analysis_dashboard.py")
 
 
 if __name__ == "__main__":
