@@ -18,6 +18,8 @@ TARGET_GROSS_EXPOSURE = 1.0
 LONG_GROSS_SHARE = 0.0
 LONG_WEIGHT_MODE = "equal"
 SHORT_WEIGHT_MODE = "equal"
+LONG_MIN_SCORE: float | None = None
+SHORT_MIN_SCORE = -2.574211835861206
 MIN_GROSS_EXPOSURE = 0.25
 
 
@@ -96,6 +98,19 @@ def _allocate_weights(
     raise ValueError(f"Unknown weight mode: {mode}")
 
 
+def _apply_min_score(
+    selected_ids: list[str],
+    *,
+    frame: pd.DataFrame,
+    score: pd.Series,
+    min_score: float | None,
+) -> list[str]:
+    if min_score is None or not selected_ids:
+        return selected_ids
+    score_by_id = pd.Series(score.to_numpy(dtype=float), index=frame["ID"].astype(str).values)
+    return [asset_id for asset_id in selected_ids if float(score_by_id.loc[asset_id]) >= min_score]
+
+
 def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, object]]:
     required = {"ID", *RANK_COLUMNS}
     missing = sorted(required - set(forecast.columns))
@@ -122,6 +137,8 @@ def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, d
         exclude_ids=set(long_ids),
         secondary_score=long_score,
     )
+    long_ids = _apply_min_score(long_ids, frame=baseline, score=long_score, min_score=LONG_MIN_SCORE)
+    short_ids = _apply_min_score(short_ids, frame=baseline, score=short_score, min_score=SHORT_MIN_SCORE)
 
     baseline["Decision"] = 0.0
     long_gross = TARGET_GROSS_EXPOSURE if SHORT_SELECTION_COUNT == 0 else TARGET_GROSS_EXPOSURE * LONG_GROSS_SHARE
