@@ -291,6 +291,7 @@ def run() -> None:
     )
 
     mb_fn = lambda: minibatch_sampler(meta_minibatch_size, xtype_train)
+    meta_selection_split = "validation"
 
     print("[Step 04] Training meta-model …")
     t0 = time.time()
@@ -298,8 +299,8 @@ def run() -> None:
         model=meta_model,
         criterion=criterion,
         train=[y_train, x_train, xtype_train],
-        test=[y_test, x_test, xtype_test],
-        validation=[y_val, x_val, xtype_val],
+        test=[y_val, x_val, xtype_val],
+        validation=[y_test, x_test, xtype_test],
         epochs=meta_epochs,
         minibatch=mb_fn,
         temp_dir=TEMP_DIR,
@@ -346,6 +347,7 @@ def run() -> None:
             "meta_patience": meta_patience,
             "meta_lr": meta_lr,
             "meta_minibatch_size": meta_minibatch_size,
+            "meta_selection_split": meta_selection_split,
             "meta_trainable_layer_start": max(0, n_layers - 1),
             "meta_trainable_layer_end": n_layers - 1,
         },
