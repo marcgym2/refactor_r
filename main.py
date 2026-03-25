@@ -2,7 +2,7 @@
 main.py — Pipeline Orchestrator.
 
 Supports both the legacy single-universe run and a split flow:
-- train on a broad universe (`default`, `mags7`, or `sp500`)
+- train on a configured universe (`default`, `mags7`, `sp500`, or `m6`)
 - infer only on discovery candidates plus SPY
 """
 
@@ -11,13 +11,14 @@ from __future__ import annotations
 import argparse
 
 from pipeline import forecast, ingest, infer, portfolio, train, universe
+from pipeline.config import resolve_train_start_date
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the stock ranking pipeline.")
     parser.add_argument(
         "--train-universe",
-        choices=["default", "mags7", "sp500"],
+        choices=["default", "mags7", "sp500", "m6"],
         default="default",
         help="Universe used for ingest + training.",
     )
@@ -48,24 +49,35 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _run_split_inference_flow(args: argparse.Namespace) -> None:
+    train_start_date = resolve_train_start_date(args.train_universe)
     universe.run(universe_mode=args.train_universe)
-    ingest.run()
+    ingest.run(start_date=train_start_date)
     train.run()
 
+    inference_universe_mode = "default"
+    include_spy = not args.exclude_spy
+    merge_candidates_with_base = False
+    if args.train_universe == "m6":
+        inference_universe_mode = "m6"
+        include_spy = False
+        merge_candidates_with_base = True
+
     universe.run(
-        universe_mode="default",
+        universe_mode=inference_universe_mode,
         candidate_file=args.candidate_file,
         discovery_date=args.discovery_date,
         top_k=args.top_k,
-        include_spy=not args.exclude_spy,
+        include_spy=include_spy,
         use_full_candidates=args.use_full_candidates,
+        merge_candidates_with_base=merge_candidates_with_base,
     )
-    ingest.run()
-    infer.run()
-    portfolio.run()
+    ingest.run(start_date=train_start_date)
+    forecast_path = infer.run()
+    portfolio.run(forecast_path=forecast_path)
 
 
 def _run_legacy_flow(args: argparse.Namespace) -> None:
+    train_start_date = resolve_train_start_date(args.train_universe)
     universe.run(
         universe_mode=args.train_universe,
         candidate_file=args.candidate_file,
@@ -74,10 +86,10 @@ def _run_legacy_flow(args: argparse.Namespace) -> None:
         include_spy=not args.exclude_spy,
         use_full_candidates=args.use_full_candidates,
     )
-    ingest.run()
+    ingest.run(start_date=train_start_date)
     train.run()
-    forecast.run()
-    portfolio.run()
+    forecast_path = forecast.run()
+    portfolio.run(forecast_path=forecast_path)
 
 
 def main() -> None:

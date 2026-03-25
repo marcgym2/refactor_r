@@ -17,6 +17,7 @@ import torch
 import torch.nn.functional as F
 
 from .config import DATA_DIR, FEATURES_DIR, FORECASTS_DIR, SUBMISSION_INTERVALS
+from .m6_metrics import TARGET_RANK_COLUMNS
 from .features import (
     TTR_FEATURES,
     compute_return,
@@ -38,7 +39,7 @@ def _load_feature_names() -> list[str]:
     feature_frame = pd.read_parquet(os.path.join(FEATURES_DIR, "features_standardized.parquet"))
     exclude_cols = {
         "Ticker", "Interval", "Return", "Shift",
-        "ReturnQuintile", "IntervalStart", "IntervalEnd",
+        "ReturnQuintile", "IntervalStart", "IntervalEnd", *TARGET_RANK_COLUMNS,
     }
     return [column for column in feature_frame.columns if column not in exclude_cols]
 

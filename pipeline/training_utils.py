@@ -19,6 +19,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .m6_metrics import build_group_target_frame
+
 
 # ---------------------------------------------------------------------------
 # Scalar helpers
@@ -37,7 +39,10 @@ def augment_stock(df: pd.DataFrame, time_end: date) -> pd.DataFrame:
 
 def standardize(x: pd.Series) -> pd.Series:
     """Z-score standardization."""
-    return (x - x.mean()) / (x.std() + 1e-5)
+    std = x.std(ddof=0)
+    if not np.isfinite(std) or std < 1e-8:
+        return pd.Series(0.0, index=x.index, dtype=float)
+    return (x - x.mean()) / std
 
 
 def compute_quintile(x: pd.Series) -> pd.Series:
@@ -234,6 +239,8 @@ def gen_stocks_aggr(
     # Compute return quintile per interval
     if "Return" in result.columns:
         result["ReturnQuintile"] = result.groupby("Interval", observed=False)["Return"].transform(compute_quintile)
+        target_frame = build_group_target_frame(result, group_col="Interval", id_col="Ticker", return_col="Return")
+        result = result.merge(target_frame, on=["Interval", "Ticker"], how="left")
 
     # Parse interval start/end dates
     result["IntervalStart"] = result["Interval"].astype(str).str[:10].apply(

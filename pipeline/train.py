@@ -20,6 +20,7 @@ import torch
 import torch.nn.functional as F
 
 from .config import DATA_DIR, FEATURES_DIR, TEMP_DIR, SHIFTS, SUBMISSION_INTERVALS
+from .m6_metrics import TARGET_RANK_COLUMNS
 from .training_utils import (
     ConstructFFNN,
     compute_rps_tensor,
@@ -116,7 +117,7 @@ def run() -> None:
     # ------------------------------------------------------------------
     exclude_cols = {
         "Ticker", "Interval", "Return", "Shift",
-        "ReturnQuintile", "IntervalStart", "IntervalEnd",
+        "ReturnQuintile", "IntervalStart", "IntervalEnd", *TARGET_RANK_COLUMNS,
     }
     feature_names = [c for c in stocks_aggr.columns if c not in exclude_cols]
     if not feature_names:
@@ -167,12 +168,16 @@ def run() -> None:
     # ------------------------------------------------------------------
     # Prepare tensors
     # ------------------------------------------------------------------
-    y_quintiles = sa["ReturnQuintile"].values
-    y_tensor = torch.zeros(len(y_quintiles), 5)
-    for i, q in enumerate(y_quintiles):
-        if not np.isnan(q):
-            q = int(q)
-            y_tensor[i, q - 1 :] = 1.0
+    if set(TARGET_RANK_COLUMNS).issubset(sa.columns):
+        target_probs = sa[TARGET_RANK_COLUMNS].fillna(0.0).to_numpy(dtype=float)
+        y_tensor = torch.tensor(np.cumsum(target_probs, axis=1), dtype=torch.float32)
+    else:
+        y_quintiles = sa["ReturnQuintile"].values
+        y_tensor = torch.zeros(len(y_quintiles), 5)
+        for i, q in enumerate(y_quintiles):
+            if not np.isnan(q):
+                q = int(q)
+                y_tensor[i, q - 1 :] = 1.0
 
     x = torch.tensor(sa[feature_names].values, dtype=torch.float32)
 
