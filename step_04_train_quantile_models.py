@@ -74,18 +74,30 @@ def run() -> None:
     )
 
     precomputed_path = os.path.join(FEATURES_DIR, "features_raw.parquet")
-    generate = not os.path.exists(precomputed_path)  # Use cache when available
+    required_cols = {"Interval", "Ticker", "Shift", "IntervalStart", "IntervalEnd"}
 
-    if generate:
+    def _generate_and_cache() -> pd.DataFrame:
         print("[Step 04] Generating aggregated features …")
-        stocks_aggr = gen_stocks_aggr(
+        generated = gen_stocks_aggr(
             stocks, interval_infos, feature_fns, check_leakage=False
         )
-        stocks_aggr.to_parquet(precomputed_path, index=False)
-    else:
-        if not os.path.exists(precomputed_path):
-            raise FileNotFoundError(f"{precomputed_path} not found.")
+        if generated.empty:
+            raise RuntimeError(
+                "Feature aggregation produced no rows. Check downloaded ticker data."
+            )
+        generated.to_parquet(precomputed_path, index=False)
+        return generated
+
+    if os.path.exists(precomputed_path):
         stocks_aggr = pd.read_parquet(precomputed_path)
+        missing = sorted(required_cols - set(stocks_aggr.columns))
+        if missing or stocks_aggr.empty:
+            print(
+                f"[Step 04] Cached features invalid (missing: {missing}, rows: {len(stocks_aggr)}). Regenerating."
+            )
+            stocks_aggr = _generate_and_cache()
+    else:
+        stocks_aggr = _generate_and_cache()
 
     # ------------------------------------------------------------------
     # Impute & standardise
@@ -95,6 +107,8 @@ def run() -> None:
         "ReturnQuintile", "IntervalStart", "IntervalEnd",
     }
     feature_names = [c for c in stocks_aggr.columns if c not in exclude_cols]
+    if not feature_names:
+        raise RuntimeError("No feature columns were produced for model training.")
 
     stocks_aggr = impute_features(stocks_aggr, feature_names)
     std_features = [f for f in feature_names if f != "ETF"]
