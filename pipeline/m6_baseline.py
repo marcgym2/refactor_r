@@ -12,10 +12,12 @@ RANK_COLUMNS = [f"Rank{i}" for i in range(1, 6)]
 # Active strategy parameters.
 LONG_SCORE = "expected_rank"
 SHORT_SCORE = "Rank1"
-LONG_SELECTION_COUNT = 2
+LONG_SELECTION_COUNT = 3
 SHORT_SELECTION_COUNT = 0
 TARGET_GROSS_EXPOSURE = 1.0
 LONG_GROSS_SHARE = 1.0
+LONG_WEIGHT_MODE = "score"
+SHORT_WEIGHT_MODE = "equal"
 MIN_GROSS_EXPOSURE = 0.25
 
 
@@ -63,6 +65,35 @@ def _select_unique_ids(
     return ranked["ID"].astype(str).head(count).tolist()
 
 
+def _allocate_weights(
+    frame: pd.DataFrame,
+    *,
+    selected_ids: list[str],
+    gross_exposure: float,
+    score: pd.Series,
+    mode: str,
+) -> pd.Series:
+    weights = pd.Series(0.0, index=frame["ID"].astype(str))
+    if not selected_ids or gross_exposure <= 0.0:
+        return weights
+
+    if mode == "equal":
+        weights.loc[selected_ids] = gross_exposure / float(len(selected_ids))
+        return weights
+
+    if mode == "score":
+        score_by_id = pd.Series(score.to_numpy(dtype=float), index=frame["ID"].astype(str).values)
+        selected_scores = score_by_id.loc[selected_ids].astype(float).clip(lower=0.0)
+        total = float(selected_scores.sum())
+        if total > 0.0:
+            weights.loc[selected_ids] = selected_scores / total * gross_exposure
+            return weights
+        weights.loc[selected_ids] = gross_exposure / float(len(selected_ids))
+        return weights
+
+    raise ValueError(f"Unknown weight mode: {mode}")
+
+
 def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, object]]:
     required = {"ID", *RANK_COLUMNS}
     missing = sorted(required - set(forecast.columns))
@@ -93,10 +124,23 @@ def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, d
     baseline["Decision"] = 0.0
     long_gross = TARGET_GROSS_EXPOSURE if SHORT_SELECTION_COUNT == 0 else TARGET_GROSS_EXPOSURE * LONG_GROSS_SHARE
     short_gross = 0.0 if SHORT_SELECTION_COUNT == 0 else TARGET_GROSS_EXPOSURE - long_gross
-    if long_ids:
-        baseline.loc[baseline["ID"].isin(long_ids), "Decision"] = long_gross / float(len(long_ids))
-    if short_ids and short_gross > 0.0:
-        baseline.loc[baseline["ID"].isin(short_ids), "Decision"] = -short_gross / float(len(short_ids))
+    long_weights = _allocate_weights(
+        baseline,
+        selected_ids=long_ids,
+        gross_exposure=long_gross,
+        score=long_score,
+        mode=LONG_WEIGHT_MODE,
+    )
+    short_weights = _allocate_weights(
+        baseline,
+        selected_ids=short_ids,
+        gross_exposure=short_gross,
+        score=short_score,
+        mode=SHORT_WEIGHT_MODE,
+    )
+    baseline["Decision"] = long_weights.reindex(baseline["ID"]).fillna(0.0).values
+    if short_ids:
+        baseline["Decision"] -= short_weights.reindex(baseline["ID"]).fillna(0.0).values
 
     baseline["Position"] = "Flat"
     baseline.loc[baseline["Decision"] > 0, "Position"] = "Long"
