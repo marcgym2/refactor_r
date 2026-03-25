@@ -11,11 +11,11 @@ RANK_COLUMNS = [f"Rank{i}" for i in range(1, 6)]
 
 # Active strategy parameters.
 LONG_SCORE = "expected_rank"
-SHORT_SCORE = "Rank1"
+SHORT_SCORE = "negative_expected_rank"
 LONG_SELECTION_COUNT = 3
-SHORT_SELECTION_COUNT = 0
+SHORT_SELECTION_COUNT = 1
 TARGET_GROSS_EXPOSURE = 1.0
-LONG_GROSS_SHARE = 1.0
+LONG_GROSS_SHARE = 0.9
 LONG_WEIGHT_MODE = "equal"
 SHORT_WEIGHT_MODE = "equal"
 MIN_GROSS_EXPOSURE = 0.25
@@ -26,6 +26,8 @@ def _compute_score(frame: pd.DataFrame, metric: str) -> pd.Series:
         return frame["Rank5"] - frame["Rank1"]
     if metric == "expected_rank":
         return sum(frame[f"Rank{i}"] * i for i in range(1, 6))
+    if metric == "negative_expected_rank":
+        return -sum(frame[f"Rank{i}"] * i for i in range(1, 6))
     if metric == "tail5":
         return frame["Rank5"] + 0.5 * frame["Rank4"]
     if metric == "tail1":
