@@ -55,6 +55,22 @@ class M6BaselineTest(unittest.TestCase):
         self.assertAlmostEqual(float(summary["gross_exposure"]), 0.25)
         self.assertEqual(len(submission.loc[submission["Invest"]]), 3)
 
+    def test_baseline_preserves_input_id_order(self) -> None:
+        frame = pd.DataFrame(
+            {
+                "ID": ["TSLA", "ABBV", "IVV", "META", "ABBV"],
+                "Rank1": [0.48, 0.05, 0.08, 0.42, 0.05],
+                "Rank2": [0.18, 0.10, 0.12, 0.20, 0.10],
+                "Rank3": [0.14, 0.15, 0.15, 0.18, 0.15],
+                "Rank4": [0.15, 0.25, 0.25, 0.08, 0.25],
+                "Rank5": [0.05, 0.45, 0.40, 0.12, 0.45],
+            }
+        )
+
+        submission, _ = build_m6_baseline_submission(frame)
+
+        self.assertEqual(submission["ID"].tolist(), ["TSLA", "ABBV", "IVV", "META"])
+
 
 if __name__ == "__main__":
     unittest.main()

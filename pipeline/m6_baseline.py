@@ -220,12 +220,24 @@ def build_m6_baseline_submission(
     if missing:
         raise ValueError(f"Prediction frame missing required columns: {missing}")
 
+    ordered_ids = (
+        frame[id_col]
+        .astype(str)
+        .drop_duplicates()
+        .tolist()
+    )
     grouped = (
         frame[[id_col, *RANK_COLUMNS]]
         .copy()
         .rename(columns={id_col: "ID"})
-        .groupby("ID", as_index=False)[RANK_COLUMNS]
+        .groupby("ID", as_index=False, sort=False)[RANK_COLUMNS]
         .mean()
     )
     submission, summary = apply_m6_baseline_portfolio(grouped)
+    submission = (
+        submission
+        .set_index("ID")
+        .reindex(ordered_ids)
+        .reset_index()
+    )
     return submission[["ID", *RANK_COLUMNS, "Decision", "Position", "Invest"]], summary
