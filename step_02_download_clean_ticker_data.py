@@ -1,53 +1,45 @@
 """
 Step 02 — Download & Clean Ticker Data.
 
-Downloads OHLCV data via yfinance, records metadata, and cleans NAs
-using noisy interpolation.
+Synchronizes OHLCV data into a local SQLite cache, only backfilling
+recent missing days for cached tickers, then exports the cleaned
+in-memory representation used by the rest of the pipeline.
 """
 
 import os
-import time
 import pickle
 
-import numpy as np
 import pandas as pd
-import yfinance as yf
 
 from config import DATA_DIR, TRAIN_START_DATE
+from market_data_store import load_ticker_history, sync_ticker_history
 from step_02a_data_cleaning_helpers import noisy_interpolation
 
 
 def run() -> None:
-    """Download stock data, clean NAs, and persist to disk."""
+    """Incrementally sync stock data, clean NAs, and persist to disk."""
 
     # --- Load ticker metadata ---
     meta_path = os.path.join(DATA_DIR, "tickers_metadata.parquet")
     stock_names = pd.read_parquet(meta_path)
 
     tickers = stock_names["Symbol"].tolist()
-    from_date = str(TRAIN_START_DATE)
 
-    # --- Download ---
+    # --- Sync from remote into local SQLite cache ---
     stocks: dict[str, pd.DataFrame] = {}
     min_dates, max_dates, activities, missings = [], [], [], []
 
     for i, ticker in enumerate(tickers):
         pct = round((i + 1) / len(tickers), 3)
-        print(f"[Step 02] Downloading {ticker}  ({pct})")
-        time.sleep(0.5)
         try:
-            df = yf.download(ticker, start=from_date, progress=False, auto_adjust=False)
+            sync_info = sync_ticker_history(ticker, TRAIN_START_DATE)
+            print(
+                f"[Step 02] Syncing {ticker} ({pct}) "
+                f"[{sync_info['mode']}, from {sync_info['fetch_start']}, rows {sync_info['rows_written']}]"
+            )
+            df = load_ticker_history(ticker)
             if df.empty:
-                raise ValueError("Empty dataframe")
-            # Flatten multi-level column index if present
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-
-            df = df.reset_index()
-            df = df.rename(columns={"Date": "index", "Adj Close": "Adjusted"})
-            cols = ["index", "Open", "High", "Low", "Close", "Volume", "Adjusted"]
-            df = df[cols]
-            df["index"] = pd.to_datetime(df["index"]).dt.date
+                raise ValueError("No cached market data after sync")
 
             min_dates.append(df["index"].min())
             max_dates.append(df["index"].max())
@@ -56,7 +48,7 @@ def run() -> None:
             stocks[ticker] = df
             missings.append(int(df.isna().any(axis=1).sum()))
         except Exception as exc:
-            print(f"  ⚠ Failed to download {ticker}: {exc}")
+            print(f"  ⚠ Failed to sync {ticker}: {exc}")
             min_dates.append(None)
             max_dates.append(None)
             activities.append(None)

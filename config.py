@@ -15,6 +15,7 @@ DATA_DIR = "data"
 FEATURES_DIR = "features"
 FORECASTS_DIR = "forecasts"
 TEMP_DIR = "temp"
+MARKET_DATA_DB = os.path.join(DATA_DIR, "market_data.sqlite")
 
 # === Ensure Directories Exist ===
 for d in [DATA_DIR, FEATURES_DIR, FORECASTS_DIR, TEMP_DIR]:

@@ -322,18 +322,24 @@ def _compute_cti(df: pd.DataFrame) -> pd.DataFrame:
 
 def _compute_evwma(df: pd.DataFrame) -> pd.DataFrame:
     """Elastic Volume Weighted Moving Average (approx)."""
-    close, vol = df["Close"].values, df["Volume"].values
+    close = pd.to_numeric(df["Close"], errors="coerce").to_numpy(dtype=float)
+    vol = pd.to_numeric(df["Volume"], errors="coerce").fillna(0.0).clip(lower=0.0).to_numpy(dtype=float)
     n = 20
-    evwma = np.full_like(close, np.nan, dtype=float)
+    evwma = np.full(len(close), np.nan, dtype=float)
     if len(close) > n:
-        vol_sum = np.sum(vol[:n])
-        evwma[n - 1] = np.mean(close[:n])
+        rolling_vol = pd.Series(vol).rolling(n, min_periods=n).sum().to_numpy(dtype=float)
+        evwma[n - 1] = np.nanmean(close[:n])
         for i in range(n, len(close)):
-            vol_sum = vol_sum  # simplified rolling
-            if vol_sum > 0:
-                evwma[i] = evwma[i - 1] + (vol[i] / (vol_sum + 1e-10)) * (close[i] - evwma[i - 1])
-            else:
-                evwma[i] = evwma[i - 1]
+            prev = evwma[i - 1]
+            if not np.isfinite(prev):
+                prev = close[i - 1]
+            if not np.isfinite(prev) or not np.isfinite(close[i]):
+                continue
+            denom = rolling_vol[i]
+            weight = 0.0
+            if np.isfinite(denom) and denom > 0:
+                weight = float(np.clip(vol[i] / denom, 0.0, 1.0))
+            evwma[i] = prev + weight * (close[i] - prev)
     return pd.DataFrame({"EVWMA": evwma})
 
 def _compute_pbands(df: pd.DataFrame) -> pd.DataFrame:

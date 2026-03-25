@@ -1,0 +1,6 @@
+__pycache__/
+.venv/
+.venv312/
+.uv-cache/
+data/market_data.sqlite
+data/market_data.sqlite-*
