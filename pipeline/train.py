@@ -271,7 +271,7 @@ def run() -> None:
     # ------------------------------------------------------------------
     meta_mesa_parameter_size = 1
     meta_allow_bias = False
-    meta_dropout = 0.0
+    meta_dropout = 0.05
     meta_init_mesa_range = 0.01
     meta_init_meta_range = 1
     meta_epochs = 100
