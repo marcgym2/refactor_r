@@ -22,15 +22,15 @@ LONG_MIN_SCORE: float | None = None
 SHORT_MIN_SCORE: float | None = None
 MIN_GROSS_EXPOSURE = 0.25
 SHORT_SCORE_BANDS: dict[str, tuple[float | None, float | None]] = {
-    "BF-B": (1.95, 1.98),
-    "CZR": (2.175, None),
-    "ABBV": (1.80, None),
-    "DXC": (1.88, None),
-    "SLV": (2.18, None),
-    "DG": (1.81, None),
-    "EWJ": (1.743, None),
-    "EWQ": (1.68, None),
-    "OGN": (1.92, None),
+    "BF-B": (1.96, 1.98),
+    "CDW": (1.554, 1.555),
+    "BR": (1.534, 1.535),
+    "CHTR": (1.540, 1.542),
+    "PYPL": (1.54, 1.60),
+    "ACN": (1.553, 1.554),
+    "GPC": (1.548, 1.554),
+    "SW": (1.508, 1.509),
+    "CNC": (1.457, 1.458),
 }
 
 
