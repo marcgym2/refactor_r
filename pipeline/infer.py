@@ -17,6 +17,7 @@ import torch
 import torch.nn.functional as F
 
 from .config import DATA_DIR, FEATURES_DIR, FORECASTS_DIR, SUBMISSION_INTERVALS
+from .m6_baseline import RANK_COLUMNS, build_m6_baseline_submission
 from .m6_metrics import TARGET_RANK_COLUMNS
 from .features import (
     TTR_FEATURES,
@@ -155,10 +156,16 @@ def run(as_of_date: date | None = None) -> str:
         "Decision": 0.0,
     })
     submission = template[["ID"]].merge(prediction_rows, on="ID", how="left")
-    for rank_col in ["Rank1", "Rank2", "Rank3", "Rank4", "Rank5"]:
+    for rank_col in RANK_COLUMNS:
         submission[rank_col] = submission[rank_col].fillna(0.2).astype(float)
-    submission["Decision"] = 0.25 / max(len(submission), 1)
+    submission, allocation_summary = build_m6_baseline_submission(submission)
+    submission = submission[["ID", *RANK_COLUMNS, "Decision"]]
     submission = validate_submission(submission, template, do_round=True)
+    print(
+        "[Step 06] M6 baseline allocation "
+        f"(gross exposure={allocation_summary['gross_exposure']:.4f}, "
+        f"longs={allocation_summary['long_ids']}, shorts={allocation_summary['short_ids']})"
+    )
 
     out_path = os.path.join(FORECASTS_DIR, f"ranked_forecast_{run_date.isoformat()}_inference.csv")
     submission.to_csv(out_path, index=False)

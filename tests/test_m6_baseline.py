@@ -1,0 +1,33 @@
+from __future__ import annotations
+
+import unittest
+
+import pandas as pd
+
+from pipeline.m6_baseline import build_m6_baseline_submission
+
+
+class M6BaselineTest(unittest.TestCase):
+    def test_baseline_uses_unique_assets_across_long_and_short_legs(self) -> None:
+        frame = pd.DataFrame(
+            {
+                "ID": ["OVERLAP", "LONG2", "SHORT1", "SHORT2", "FLAT"],
+                "Rank1": [0.44, 0.05, 0.52, 0.47, 0.20],
+                "Rank2": [0.12, 0.10, 0.16, 0.18, 0.20],
+                "Rank3": [0.10, 0.15, 0.14, 0.15, 0.20],
+                "Rank4": [0.14, 0.25, 0.10, 0.10, 0.20],
+                "Rank5": [0.46, 0.45, 0.08, 0.10, 0.20],
+            }
+        )
+
+        submission, summary = build_m6_baseline_submission(frame)
+
+        self.assertEqual(summary["long_ids"], ["OVERLAP", "LONG2"])
+        self.assertEqual(summary["short_ids"], ["SHORT1", "SHORT2"])
+        self.assertAlmostEqual(float(submission.loc[submission["ID"] == "OVERLAP", "Decision"].iloc[0]), 0.0625)
+        self.assertAlmostEqual(float(submission.loc[submission["ID"] == "SHORT1", "Decision"].iloc[0]), -0.0625)
+        self.assertTrue(bool(summary["meets_minimum_exposure"]))
+
+
+if __name__ == "__main__":
+    unittest.main()

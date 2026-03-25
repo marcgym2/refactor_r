@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 from .config import DATA_DIR, FEATURES_DIR, FORECASTS_DIR
+from .m6_baseline import RANK_COLUMNS, build_m6_baseline_submission
 from .m6_metrics import evaluate_submission_from_stocks
 
 
@@ -26,7 +27,7 @@ def _build_template(stock_names: pd.DataFrame) -> pd.DataFrame:
         "Rank3": 0.2,
         "Rank4": 0.2,
         "Rank5": 0.2,
-        "Decision": 0.01,
+        "Decision": 0.0,
     })
 
 
@@ -48,7 +49,7 @@ def validate_submission(
     do_round: bool = False,
 ) -> pd.DataFrame:
     """Validate a ranked-forecast submission against a template."""
-    rank_cols = ["Rank1", "Rank2", "Rank3", "Rank4", "Rank5"]
+    rank_cols = RANK_COLUMNS
 
     if do_round:
         orig = submission.copy()
@@ -96,17 +97,23 @@ def run() -> str:
     period = f"{val_data['IntervalStart'].min()} - {val_data['IntervalEnd'].max()}"
 
     # Average rank predictions per ticker (across intervals and shifts)
-    rank_cols = ["Rank1", "Rank2", "Rank3", "Rank4", "Rank5"]
+    rank_cols = RANK_COLUMNS
     ticker_avg = val_data.groupby("Ticker")[rank_cols].mean().reset_index()
     ticker_avg = ticker_avg.rename(columns={"Ticker": "ID"})
 
-    # Align with template — use uniform 0.2 for any missing tickers
+    # Align with template — use uniform 0.2 for any missing tickers.
     submission = template[["ID"]].merge(ticker_avg, on="ID", how="left")
     for col in rank_cols:
         submission[col] = submission[col].fillna(0.2).astype(float)
-    submission["Decision"] = 0.01 * 0.25
+    submission, allocation_summary = build_m6_baseline_submission(submission)
+    submission = submission[["ID", *rank_cols, "Decision"]]
 
     submission = validate_submission(submission, template, do_round=True)
+    print(
+        "[Step 06] M6 baseline allocation "
+        f"(gross exposure={allocation_summary['gross_exposure']:.4f}, "
+        f"longs={allocation_summary['long_ids']}, shorts={allocation_summary['short_ids']})"
+    )
 
     out_path = os.path.join(FORECASTS_DIR, f"ranked_forecast_{period}.csv")
     submission.to_csv(out_path, index=False)

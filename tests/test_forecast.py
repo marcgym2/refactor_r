@@ -22,7 +22,7 @@ class ForecastTest(unittest.TestCase):
             features_dir.mkdir(parents=True, exist_ok=True)
             forecasts_dir.mkdir(parents=True, exist_ok=True)
 
-            pd.DataFrame({"Symbol": ["ABBV", "IVV"]}).to_parquet(
+            pd.DataFrame({"Symbol": ["ABBV", "IVV", "META", "TSLA"]}).to_parquet(
                 data_dir / "tickers_metadata.parquet",
                 index=False,
             )
@@ -41,6 +41,18 @@ class ForecastTest(unittest.TestCase):
                                 "Adjusted": [100.0, 102.0],
                             }
                         ),
+                        "META": pd.DataFrame(
+                            {
+                                "index": ["2026-03-24", "2026-03-25"],
+                                "Adjusted": [100.0, 98.0],
+                            }
+                        ),
+                        "TSLA": pd.DataFrame(
+                            {
+                                "index": ["2026-03-24", "2026-03-25"],
+                                "Adjusted": [100.0, 97.0],
+                            }
+                        ),
                     },
                     handle,
                 )
@@ -48,21 +60,21 @@ class ForecastTest(unittest.TestCase):
             stale_template = forecasts_dir / "ranked_forecast_template.csv"
             stale_template.write_text(
                 "ID,Rank1,Rank2,Rank3,Rank4,Rank5,Decision\n"
-                "SPY,0.2,0.2,0.2,0.2,0.2,0.01\n"
+                "SPY,0.2,0.2,0.2,0.2,0.2,0.00\n"
             )
 
             predictions = {
                 "meta": pd.DataFrame(
                     {
-                        "Split": ["Validation", "Validation"],
-                        "Ticker": ["ABBV", "IVV"],
-                        "IntervalStart": ["2026-03-24", "2026-03-24"],
-                        "IntervalEnd": ["2026-03-25", "2026-03-25"],
-                        "Rank1": [0.1, 0.2],
-                        "Rank2": [0.2, 0.2],
-                        "Rank3": [0.2, 0.2],
-                        "Rank4": [0.2, 0.2],
-                        "Rank5": [0.3, 0.2],
+                        "Split": ["Validation", "Validation", "Validation", "Validation"],
+                        "Ticker": ["ABBV", "IVV", "META", "TSLA"],
+                        "IntervalStart": ["2026-03-24"] * 4,
+                        "IntervalEnd": ["2026-03-25"] * 4,
+                        "Rank1": [0.05, 0.08, 0.42, 0.48],
+                        "Rank2": [0.10, 0.12, 0.20, 0.18],
+                        "Rank3": [0.15, 0.15, 0.18, 0.14],
+                        "Rank4": [0.25, 0.25, 0.08, 0.15],
+                        "Rank5": [0.45, 0.40, 0.12, 0.05],
                     }
                 )
             }
@@ -78,8 +90,12 @@ class ForecastTest(unittest.TestCase):
             submission = pd.read_csv(output_path)
             metrics_path = Path(str(output_path).replace(".csv", "_m6_metrics.json"))
 
-            self.assertEqual(refreshed_template["ID"].tolist(), ["ABBV", "IVV"])
-            self.assertEqual(submission["ID"].tolist(), ["ABBV", "IVV"])
+            self.assertEqual(refreshed_template["ID"].tolist(), ["ABBV", "IVV", "META", "TSLA"])
+            self.assertEqual(submission["ID"].tolist(), ["ABBV", "IVV", "META", "TSLA"])
+            self.assertAlmostEqual(float(submission.loc[submission["ID"] == "ABBV", "Decision"].iloc[0]), 0.0625)
+            self.assertAlmostEqual(float(submission.loc[submission["ID"] == "IVV", "Decision"].iloc[0]), 0.0625)
+            self.assertAlmostEqual(float(submission.loc[submission["ID"] == "META", "Decision"].iloc[0]), -0.0625)
+            self.assertAlmostEqual(float(submission.loc[submission["ID"] == "TSLA", "Decision"].iloc[0]), -0.0625)
             self.assertTrue(metrics_path.exists())
 
 
