@@ -1,0 +1,15 @@
+{
+  "VCX": [
+    {"id": "news-vcx-1", "publisher": "Reuters", "published_at": "Tue, 24 Mar 2026 18:15:00 GMT", "title": "VCX shares jump after small defense contract update"},
+    {"id": "news-vcx-2", "publisher": "Benzinga", "published_at": "Tue, 24 Mar 2026 19:05:00 GMT", "title": "VCX retail interest rises with unusual volume"}
+  ],
+  "QBTS": [
+    {"id": "news-qbts-1", "publisher": "MarketWatch", "published_at": "Tue, 24 Mar 2026 17:55:00 GMT", "title": "QBTS sees fresh retail attention alongside volume"}
+  ],
+  "SOUN": [
+    {"id": "news-soun-1", "publisher": "Seeking Alpha", "published_at": "Tue, 24 Mar 2026 18:35:00 GMT", "title": "SOUN mentions and trading activity climb"}
+  ],
+  "PLTR": [
+    {"id": "news-pltr-1", "publisher": "Barrons", "published_at": "Tue, 24 Mar 2026 18:05:00 GMT", "title": "PLTR remains in focus after recent gains"}
+  ]
+}

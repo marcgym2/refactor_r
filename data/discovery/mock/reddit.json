@@ -1,0 +1,38 @@
+{
+  "subreddits": {
+    "wallstreetbets": {
+      "posts": [
+        {"data": {"id": "wsb-post-1", "name": "t3_wsb1", "author": "apepilot", "created_utc": 1774389000, "score": 81, "title": "VCX is getting weirdly loud after the close", "selftext": "Not a thesis yet, just noticing VCX posts, volume, and attention everywhere."}},
+        {"data": {"id": "wsb-post-2", "name": "t3_wsb2", "author": "apepilot2", "created_utc": 1774389300, "score": 57, "title": "QBTS looking early again", "selftext": "QBTS has more mentions and volume than last week."}},
+        {"data": {"id": "wsb-post-3", "name": "t3_wsb3", "author": "apepilot3", "created_utc": 1774389600, "score": 64, "title": "PLTR is still on every watchlist", "selftext": "PLTR keeps getting discussed."}}
+      ],
+      "comments": [
+        {"data": {"id": "wsb-comment-1", "name": "t1_wsb1", "author": "replydesk", "created_utc": 1774390200, "score": 12, "body": "VCX could be the new weird momentum pocket."}},
+        {"data": {"id": "wsb-comment-2", "name": "t1_wsb2", "author": "replydesk2", "created_utc": 1774390400, "score": 8, "body": "QBTS and VCX both showed up on my scans."}},
+        {"data": {"id": "wsb-comment-3", "name": "t1_wsb3", "author": "replydesk3", "created_utc": 1774390600, "score": 5, "body": "PLTR is active but not exactly new."}}
+      ]
+    },
+    "stocks": {
+      "posts": [
+        {"data": {"id": "stocks-post-1", "name": "t3_stocks1", "author": "fundamentalfan", "created_utc": 1774389900, "score": 39, "title": "VCX mention growth looks unusual", "selftext": "Hardly any history and now VCX is suddenly in multiple threads."}},
+        {"data": {"id": "stocks-post-2", "name": "t3_stocks2", "author": "fundamentalfan2", "created_utc": 1774390500, "score": 33, "title": "NVDA remains a dominant attention name", "selftext": "NVDA still commands the board."}},
+        {"data": {"id": "stocks-post-3", "name": "t3_stocks3", "author": "fundamentalfan3", "created_utc": 1774390800, "score": 27, "title": "SOUN chatter climbing again", "selftext": "SOUN mentions are up from last week."}}
+      ],
+      "comments": [
+        {"data": {"id": "stocks-comment-1", "name": "t1_stocks1", "author": "deskcheck", "created_utc": 1774391100, "score": 7, "body": "VCX has more attention than usual for sure."}},
+        {"data": {"id": "stocks-comment-2", "name": "t1_stocks2", "author": "deskcheck2", "created_utc": 1774391400, "score": 9, "body": "SOUN and QBTS both popped in recent scans."}},
+        {"data": {"id": "stocks-comment-3", "name": "t1_stocks3", "author": "deskcheck3", "created_utc": 1774391600, "score": 6, "body": "PLTR feels crowded, VCX feels early."}}
+      ]
+    },
+    "pennystocks": {
+      "posts": [
+        {"data": {"id": "penny-post-1", "name": "t3_penny1", "author": "microalpha", "created_utc": 1774391700, "score": 22, "title": "VCX picked up fast today", "selftext": "VCX and QBTS were both suddenly all over penny names discussions."}},
+        {"data": {"id": "penny-post-2", "name": "t3_penny2", "author": "microalpha2", "created_utc": 1774391900, "score": 17, "title": "SOUN still active", "selftext": "SOUN not new but definitely active."}}
+      ],
+      "comments": [
+        {"data": {"id": "penny-comment-1", "name": "t1_penny1", "author": "micronote", "created_utc": 1774392100, "score": 5, "body": "VCX was barely mentioned before today."}},
+        {"data": {"id": "penny-comment-2", "name": "t1_penny2", "author": "micronote2", "created_utc": 1774392300, "score": 4, "body": "QBTS had stronger breadth than yesterday."}}
+      ]
+    }
+  }
+}
