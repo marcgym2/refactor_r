@@ -1,8 +1,9 @@
 """
 Step 01 — Generate Ticker Metadata.
 
-Builds either the default ETF universe or a discovery-driven candidate
-universe for downstream ingest / training / forecasting.
+Builds either a standalone universe, a discovery-driven candidate
+universe, or a base universe augmented with discovery candidates for
+downstream ingest / training / forecasting.
 """
 
 from __future__ import annotations
@@ -38,6 +39,7 @@ STOCK_NAMES = pd.DataFrame({
         "Communication Services", "Utilities", "Real Estate", "Broad Market", "Gold",
     ],
     "ETF": True,
+    "Benchmark": [True, False, False, False, False, False, False, False, False, False, False, False, False, False],
 })
 
 MAG7_METADATA = pd.DataFrame({
@@ -63,15 +65,56 @@ MAG7_METADATA = pd.DataFrame({
         "Broad Market",
     ],
     "ETF": [False, False, False, False, False, False, False, True],
+    "Benchmark": [False, False, False, False, False, False, False, True],
 })
+
+M6_ASSETS = [
+    "ABBV", "ACN", "AEP", "AIZ", "ALLE", "AMAT", "AMP", "AMZN", "AVB", "AVY",
+    "AXP", "BDX", "BF-B", "BMY", "BR", "CARR", "CDW", "CE", "CHTR", "CNC",
+    "CNP", "COP", "CTAS", "CZR", "DG", "DPZ", "PLD", "DXC", "META", "FTV",
+    "GOOG", "GPC", "HIG", "HST", "JPM", "KR", "OGN", "PG", "PPL", "PRU",
+    "PYPL", "EG", "ROL", "ROST", "UNH", "URI", "V", "VRSK", "SW", "XOM",
+    "IVV", "IWM", "EWU", "EWG", "EWL", "EWQ", "IEUS", "EWJ", "EWT", "MCHI",
+    "INDA", "EWY", "EWA", "EWH", "EWZ", "EWC", "IEMG", "LQD", "HYG", "SHY",
+    "IEF", "TLT", "SEGA.L", "IEAA.L", "HIGH.L", "JPEA.L", "IAU", "SLV", "GSG", "REET",
+    "ICLN", "IXN", "IGF", "IUVL.L", "IUMO.L", "SPMV.L", "IEVL.L", "IEFM.L", "MVEU.L", "XLK",
+    "XLF", "XLV", "XLE", "XLY", "XLI", "XLC", "XLU", "XLP", "XLB", "VXX",
+]
+M6_STOCK_COUNT = 50
+STRUCTURAL_METADATA_COLUMNS = {"Name", "Sector", "ETF", "Benchmark", "UniverseSource"}
+DISCOVERY_METADATA_COLUMNS = {
+    "DiscoveryCandidate",
+    "DiscoveryRank",
+    "AttentionScore",
+    "DiscoveryDate",
+}
 
 
 def _default_metadata() -> pd.DataFrame:
-    return STOCK_NAMES.copy()
+    metadata = STOCK_NAMES.copy()
+    metadata["DiscoveryCandidate"] = False
+    return metadata
 
 
 def _mag7_metadata() -> pd.DataFrame:
-    return MAG7_METADATA.copy()
+    metadata = MAG7_METADATA.copy()
+    metadata["DiscoveryCandidate"] = False
+    return metadata
+
+
+def _m6_metadata() -> pd.DataFrame:
+    stock_symbols = set(M6_ASSETS[:M6_STOCK_COUNT])
+    metadata = pd.DataFrame({"Symbol": M6_ASSETS})
+    metadata["Name"] = metadata["Symbol"]
+    metadata["Sector"] = np.where(
+        metadata["Symbol"].isin(stock_symbols),
+        "M6 Equity",
+        "M6 Fund",
+    )
+    metadata["ETF"] = ~metadata["Symbol"].isin(stock_symbols)
+    metadata["Benchmark"] = metadata["Symbol"] == "IVV"
+    metadata["DiscoveryCandidate"] = False
+    return metadata
 
 
 def _fetch_text(url: str) -> str:
@@ -118,7 +161,9 @@ def _sp500_metadata(include_spy: bool = True) -> pd.DataFrame:
     metadata = table[list(rename_map.keys())].rename(columns=rename_map)
     metadata["Symbol"] = metadata["Symbol"].astype(str).str.replace(".", "-", regex=False)
     metadata["ETF"] = False
+    metadata["Benchmark"] = False
     metadata = metadata.drop_duplicates("Symbol").reset_index(drop=True)
+    metadata["DiscoveryCandidate"] = False
 
     if include_spy and "SPY" not in set(metadata["Symbol"]):
         spy_row = pd.DataFrame({
@@ -126,8 +171,11 @@ def _sp500_metadata(include_spy: bool = True) -> pd.DataFrame:
             "Name": ["S&P 500 ETF"],
             "Sector": ["Broad Market"],
             "ETF": [True],
+            "Benchmark": [True],
         })
         metadata = pd.concat([metadata, spy_row], ignore_index=True)
+    elif "SPY" in set(metadata["Symbol"]):
+        metadata.loc[metadata["Symbol"] == "SPY", "Benchmark"] = True
 
     metadata["UniverseSource"] = source
     return metadata
@@ -181,6 +229,8 @@ def _candidate_metadata(
         "Name": candidates["symbol"],
         "Sector": "Discovery",
         "ETF": False,
+        "Benchmark": False,
+        "DiscoveryCandidate": True,
     })
 
     if "rank" in candidates.columns:
@@ -190,7 +240,12 @@ def _candidate_metadata(
     if "date" in candidates.columns:
         metadata["DiscoveryDate"] = candidates["date"].values
 
-    if include_spy and "SPY" not in set(metadata["Symbol"]):
+    if "SPY" in set(metadata["Symbol"]):
+        metadata.loc[metadata["Symbol"] == "SPY", "Name"] = "S&P 500 ETF"
+        metadata.loc[metadata["Symbol"] == "SPY", "Sector"] = "Broad Market"
+        metadata.loc[metadata["Symbol"] == "SPY", "ETF"] = True
+        metadata.loc[metadata["Symbol"] == "SPY", "Benchmark"] = True
+    elif include_spy:
         spy_values: dict[str, object] = {}
         for column, dtype in metadata.dtypes.items():
             if pd.api.types.is_numeric_dtype(dtype):
@@ -204,11 +259,69 @@ def _candidate_metadata(
             "Name": "S&P 500 ETF",
             "Sector": "Broad Market",
             "ETF": True,
+            "Benchmark": True,
         })
         metadata.loc[len(metadata)] = spy_values
 
     metadata = metadata.drop_duplicates("Symbol").reset_index(drop=True)
     return metadata
+
+
+def _merge_base_with_candidates(
+    *,
+    base_metadata: pd.DataFrame,
+    candidate_metadata: pd.DataFrame,
+) -> pd.DataFrame:
+    base = base_metadata.copy().reset_index(drop=True)
+    candidates = candidate_metadata.copy().reset_index(drop=True)
+
+    base["Symbol"] = base["Symbol"].astype(str).str.upper().str.strip()
+    candidates["Symbol"] = candidates["Symbol"].astype(str).str.upper().str.strip()
+
+    all_columns = list(dict.fromkeys([*base.columns, *candidates.columns]))
+
+    def _ensure_columns(frame: pd.DataFrame) -> pd.DataFrame:
+        frame = frame.copy()
+        for column in all_columns:
+            if column in frame.columns:
+                continue
+            if column == "DiscoveryCandidate":
+                frame[column] = False
+            elif column in {"DiscoveryRank", "AttentionScore"}:
+                frame[column] = np.nan
+            else:
+                frame[column] = None
+        return frame[all_columns]
+
+    base = _ensure_columns(base)
+    candidates = _ensure_columns(candidates)
+
+    candidate_lookup = candidates.set_index("Symbol")
+    overlapping_symbols = base.loc[
+        base["Symbol"].isin(candidate_lookup.index), "Symbol"
+    ].tolist()
+
+    for column in all_columns:
+        if column == "Symbol":
+            continue
+        mapped = base["Symbol"].map(candidate_lookup[column])
+        if column in STRUCTURAL_METADATA_COLUMNS:
+            base[column] = base[column].where(base[column].notna(), mapped)
+        elif column == "DiscoveryCandidate":
+            base[column] = (
+                base[column].astype("boolean").fillna(False).astype(bool)
+                | mapped.astype("boolean").fillna(False).astype(bool)
+            )
+        elif column in DISCOVERY_METADATA_COLUMNS:
+            overlap_mask = base["Symbol"].isin(overlapping_symbols)
+            base.loc[overlap_mask, column] = mapped.loc[overlap_mask].combine_first(
+                base.loc[overlap_mask, column]
+            )
+
+    new_rows = candidates.loc[~candidates["Symbol"].isin(set(base["Symbol"]))].copy()
+    combined = pd.concat([base, new_rows], ignore_index=True)
+    combined = combined.drop_duplicates("Symbol").reset_index(drop=True)
+    return combined
 
 
 def run(
@@ -219,31 +332,44 @@ def run(
     top_k: int | None = None,
     include_spy: bool = True,
     use_full_candidates: bool = False,
+    merge_candidates_with_base: bool = False,
 ) -> pd.DataFrame:
     """Generate and save ticker metadata."""
 
-    resolved_candidate_file = None
+    resolved_candidate_file = resolve_candidate_file(
+        candidate_file=candidate_file,
+        discovery_date=discovery_date,
+        use_full_candidates=use_full_candidates,
+    )
+
     if universe_mode == "mags7":
         metadata = _mag7_metadata()
         mode = "Magnificent 7 plus SPY universe"
+    elif universe_mode == "m6":
+        metadata = _m6_metadata()
+        mode = "M6 asset universe"
     elif universe_mode == "sp500":
         metadata = _sp500_metadata(include_spy=include_spy)
         mode = "S&P 500 universe"
-    else:
-        resolved_candidate_file = resolve_candidate_file(
-            candidate_file=candidate_file,
-            discovery_date=discovery_date,
-            use_full_candidates=use_full_candidates,
+    if universe_mode in {"mags7", "m6", "sp500"} and resolved_candidate_file and merge_candidates_with_base:
+        candidate_metadata = _candidate_metadata(
+            candidate_file=resolved_candidate_file,
+            top_k=top_k,
+            include_spy=include_spy,
         )
-
-    if universe_mode not in {"mags7", "sp500"} and resolved_candidate_file:
+        metadata = _merge_base_with_candidates(
+            base_metadata=metadata,
+            candidate_metadata=candidate_metadata,
+        )
+        mode = f"{mode} + discovery candidates from {resolved_candidate_file}"
+    elif universe_mode not in {"mags7", "m6", "sp500"} and resolved_candidate_file:
         metadata = _candidate_metadata(
             candidate_file=resolved_candidate_file,
             top_k=top_k,
             include_spy=include_spy,
         )
         mode = f"discovery candidates from {resolved_candidate_file}"
-    elif universe_mode not in {"mags7", "sp500"}:
+    elif universe_mode not in {"mags7", "m6", "sp500"}:
         metadata = _default_metadata()
         mode = "default ETF universe"
 

@@ -72,6 +72,23 @@ For the current lightweight setup, train on `mags7 + SPY` and infer on the disco
 uv run python main.py --train-universe mags7 --discovery-date 2026-03-24
 ```
 
+The M6 branch supports a merged split flow. This trains on the M6 asset universe and then scores the full M6 100 plus any additional discovery names in one inference CSV:
+
+```bash
+uv run python main.py --train-universe m6 --discovery-date 2026-03-24 --top-k 10
+```
+
+For this merged M6 inference universe, `IVV` stays the active benchmark and `SPY` is not auto-added.
+
+Run the legacy train + forecast flow only on the M6 asset universe:
+
+```bash
+uv run python main.py --train-universe m6
+```
+
+The `m6` universe uses the 100 provided assets and syncs market history starting from `2022-01-01`.
+Unavailable legacy symbols were replaced with live equivalents for this workflow: `DRE -> PLD`, `RE -> EG`, and `WRK -> SW`.
+
 Or point directly at a candidate file:
 
 ```bash

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import pickle
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -55,7 +56,17 @@ def noisy_interpolation(series: pd.Series) -> pd.Series:
     return pd.Series(result, index=series.index, name=series.name)
 
 
-def run() -> None:
+def _clip_history_start(df: pd.DataFrame, start_date: date) -> pd.DataFrame:
+    """Restrict loaded history to the active run's minimum date."""
+    if df.empty:
+        return df
+    clipped = df.copy()
+    clipped["index"] = pd.to_datetime(clipped["index"]).dt.date
+    clipped = clipped.loc[clipped["index"] >= start_date].reset_index(drop=True)
+    return clipped
+
+
+def run(*, start_date: date = TRAIN_START_DATE) -> None:
     """Incrementally sync stock data, clean NAs, and persist to disk."""
 
     # --- Load ticker metadata ---
@@ -71,12 +82,12 @@ def run() -> None:
     for i, ticker in enumerate(tickers):
         pct = round((i + 1) / len(tickers), 3)
         try:
-            sync_info = sync_ticker_history(ticker, TRAIN_START_DATE)
+            sync_info = sync_ticker_history(ticker, start_date)
             print(
                 f"[Step 02] Syncing {ticker} ({pct}) "
                 f"[{sync_info['mode']}, from {sync_info['fetch_start']}, rows {sync_info['rows_written']}]"
             )
-            df = load_ticker_history(ticker)
+            df = _clip_history_start(load_ticker_history(ticker), start_date)
             if df.empty:
                 raise ValueError("No cached market data after sync")
 

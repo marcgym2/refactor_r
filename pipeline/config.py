@@ -9,6 +9,15 @@ from datetime import date
 SHIFTS = [0, 7, 14, 21]
 SUBMISSION_INTERVALS = 12
 TRAIN_START_DATE = date(2000, 1, 1)
+UNIVERSE_TRAIN_START_DATES = {
+    "m6": date(2022, 1, 1),
+}
+
+
+def resolve_train_start_date(universe_mode: str | None = None) -> date:
+    if universe_mode is None:
+        return TRAIN_START_DATE
+    return UNIVERSE_TRAIN_START_DATES.get(universe_mode, TRAIN_START_DATE)
 
 # === Directory Paths ===
 DATA_DIR = "data"
