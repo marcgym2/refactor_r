@@ -7,6 +7,7 @@ and saves quantile predictions for all splits.
 
 from __future__ import annotations
 
+import json
 import os
 import pickle
 import time
@@ -40,10 +41,13 @@ from .features import (
 )
 from .models import MetaModel, prepare_base_model
 
+RESULTS_PATH = "results.json"
+
 
 def run() -> None:
     """Full training pipeline."""
 
+    run_started_at = time.time()
     np.random.seed(1)
     torch.manual_seed(1)
 
@@ -207,6 +211,10 @@ def run() -> None:
     layer_transforms = [F.leaky_relu] * (len(layer_sizes) - 1) + [
         lambda x: F.softmax(x, dim=1)
     ]
+    base_epochs = 100
+    base_minibatch = 200
+    base_patience = 5
+    base_lr = [0.01]
 
     base_model = ConstructFFNN(input_size, layer_sizes, layer_transforms, layer_dropouts)
     base_model = prepare_base_model(base_model, x_train)
@@ -219,14 +227,15 @@ def run() -> None:
         train=[y_train, x_train],
         test=[y_test, x_test],
         validation=[y_val, x_val],
-        epochs=100,
-        minibatch=200,
+        epochs=base_epochs,
+        minibatch=base_minibatch,
         temp_dir=TEMP_DIR,
-        patience=5,
+        patience=base_patience,
         print_every=1,
-        lr=[0.01],
+        lr=base_lr,
     )
-    print(f"[Step 04] Base model trained in {time.time() - t0:.1f}s")
+    base_elapsed = time.time() - t0
+    print(f"[Step 04] Base model trained in {base_elapsed:.1f}s")
 
     base_model = fit["model"]
     fit["progress"].to_parquet(os.path.join(FEATURES_DIR, "training_log_base.parquet"), index=False)
@@ -241,13 +250,13 @@ def run() -> None:
     print(f"[Step 04] Base validation loss: {loss_base:.5f}")
 
     # ------------------------------------------------------------------
-    # Build allow_meta_structure (last 2 layers only)
+    # Build allow_meta_structure (last 3 layers only)
     # ------------------------------------------------------------------
     keys = list(base_model.state_structure.keys())
     allow_meta_structure = OrderedDict()
     n_layers = len(base_model.layers)
     included_keys = set()
-    for li in range(max(0, n_layers - 1), n_layers):
+    for li in range(max(0, n_layers - 3), n_layers):
         included_keys.add(f"layers.{li}.weight")
         included_keys.add(f"layers.{li}.bias")
 
@@ -260,19 +269,29 @@ def run() -> None:
     # ------------------------------------------------------------------
     # Train meta-model
     # ------------------------------------------------------------------
+    meta_mesa_parameter_size = 1
+    meta_allow_bias = False
+    meta_dropout = 0.15
+    meta_init_mesa_range = 0.01
+    meta_init_meta_range = 1
+    meta_epochs = 100
+    meta_patience = 10
+    meta_lr = [0.01, 0.001, 0.001, 0.0005, 0.0003, 0.0001, 0.00005]
+    meta_minibatch_size = 4
+
     meta_model = MetaModel(
         base_model,
         xtype_train,
-        mesa_parameter_size=1,
-        allow_bias=True,
-        p_dropout=0.0,
-        init_mesa_range=0,
-        init_meta_range=1,
+        mesa_parameter_size=meta_mesa_parameter_size,
+        allow_bias=meta_allow_bias,
+        p_dropout=meta_dropout,
+        init_mesa_range=meta_init_mesa_range,
+        init_meta_range=meta_init_meta_range,
         allow_meta_structure=allow_meta_structure,
     )
 
-    lr_meta = [0.01, 0.001, 0.001, 0.0005, 0.0003, 0.0001, 0.00005]
-    mb_fn = lambda: minibatch_sampler(100, xtype_train)
+    mb_fn = lambda: minibatch_sampler(meta_minibatch_size, xtype_train)
+    meta_selection_split = "validation"
 
     print("[Step 04] Training meta-model …")
     t0 = time.time()
@@ -280,16 +299,17 @@ def run() -> None:
         model=meta_model,
         criterion=criterion,
         train=[y_train, x_train, xtype_train],
-        test=[y_test, x_test, xtype_test],
-        validation=[y_val, x_val, xtype_val],
-        epochs=100,
+        test=[y_val, x_val, xtype_val],
+        validation=[y_test, x_test, xtype_test],
+        epochs=meta_epochs,
         minibatch=mb_fn,
         temp_dir=TEMP_DIR,
-        patience=5,
+        patience=meta_patience,
         print_every=1,
-        lr=lr_meta,
+        lr=meta_lr,
     )
-    print(f"[Step 04] Meta-model trained in {time.time() - t0:.1f}s")
+    meta_elapsed = time.time() - t0
+    print(f"[Step 04] Meta-model trained in {meta_elapsed:.1f}s")
 
     meta_model = fit_meta["model"]
     fit_meta["progress"].to_parquet(os.path.join(FEATURES_DIR, "training_log_meta.parquet"), index=False)
@@ -300,6 +320,41 @@ def run() -> None:
         y_pred_meta = meta_model(x_val, xtype_val)
         loss_meta = compute_rps_tensor(y_pred_meta, y_val).item()
     print(f"[Step 04] Meta validation loss: {loss_meta:.5f}")
+
+    best_meta_progress = fit_meta["progress"].loc[
+        fit_meta["progress"]["loss_validation"].astype(float).idxmin()
+    ]
+    results = {
+        "loss_base": float(loss_base),
+        "loss_meta": float(loss_meta),
+        "loss_meta_best_progress": float(best_meta_progress["loss_validation"]),
+        "elapsed_seconds_total": round(time.time() - run_started_at, 4),
+        "elapsed_seconds_base": round(base_elapsed, 4),
+        "elapsed_seconds_meta": round(meta_elapsed, 4),
+        "config": {
+            "layer_sizes": layer_sizes,
+            "layer_dropouts": layer_dropouts,
+            "base_epochs": base_epochs,
+            "base_minibatch": base_minibatch,
+            "base_patience": base_patience,
+            "base_lr": base_lr,
+            "meta_mesa_parameter_size": meta_mesa_parameter_size,
+            "meta_allow_bias": meta_allow_bias,
+            "meta_dropout": meta_dropout,
+            "meta_init_mesa_range": meta_init_mesa_range,
+            "meta_init_meta_range": meta_init_meta_range,
+            "meta_epochs": meta_epochs,
+            "meta_patience": meta_patience,
+            "meta_lr": meta_lr,
+            "meta_minibatch_size": meta_minibatch_size,
+            "meta_selection_split": meta_selection_split,
+            "meta_trainable_layer_start": max(0, n_layers - 1),
+            "meta_trainable_layer_end": n_layers - 1,
+        },
+    }
+    with open(RESULTS_PATH, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2)
+    print(f"[Step 04] Saved metrics → {RESULTS_PATH}")
 
     # ------------------------------------------------------------------
     # Generate quantile predictions for all splits
