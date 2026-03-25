@@ -155,6 +155,9 @@ def run(as_of_date: date | None = None) -> str:
         "Rank5": 0.2,
         "Decision": 0.0,
     })
+    template_path = os.path.join(FORECASTS_DIR, "ranked_forecast_template.csv")
+    template.to_csv(template_path, index=False)
+    print(f"[Step 06] Refreshed template → {template_path}")
     submission = template[["ID"]].merge(prediction_rows, on="ID", how="left")
     for rank_col in RANK_COLUMNS:
         submission[rank_col] = submission[rank_col].fillna(0.2).astype(float)

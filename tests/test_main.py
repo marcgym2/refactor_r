@@ -9,6 +9,50 @@ import main
 
 
 class MainSplitFlowTest(unittest.TestCase):
+    def test_parser_defaults_to_m6_universe(self) -> None:
+        args = main.build_parser().parse_args([])
+
+        self.assertEqual(args.train_universe, "m6")
+
+    def test_apply_default_run_arguments_uses_latest_discovery_for_m6(self) -> None:
+        args = Namespace(
+            train_universe="m6",
+            candidate_file=None,
+            discovery_date=None,
+            top_k=None,
+            use_full_candidates=False,
+            exclude_spy=False,
+        )
+
+        with patch("main._resolve_latest_discovery_date", return_value="2026-03-24"):
+            resolved = main._apply_default_run_arguments(args)
+
+        self.assertEqual(resolved.discovery_date, "2026-03-24")
+
+    def test_main_defaults_to_split_flow_for_m6_with_latest_discovery(self) -> None:
+        args = Namespace(
+            train_universe="m6",
+            candidate_file=None,
+            discovery_date=None,
+            top_k=None,
+            use_full_candidates=False,
+            exclude_spy=False,
+        )
+
+        class _Parser:
+            def parse_args(self) -> Namespace:
+                return args
+
+        with patch("main.build_parser", return_value=_Parser()):
+            with patch("main._resolve_latest_discovery_date", return_value="2026-03-24"):
+                with patch("main._run_split_inference_flow") as mock_split:
+                    with patch("main._run_legacy_flow") as mock_legacy:
+                        main.main()
+
+        self.assertEqual(args.discovery_date, "2026-03-24")
+        mock_split.assert_called_once_with(args)
+        mock_legacy.assert_not_called()
+
     def test_m6_split_flow_trains_on_m6_and_infers_on_m6_plus_discovery(self) -> None:
         args = Namespace(
             train_universe="m6",

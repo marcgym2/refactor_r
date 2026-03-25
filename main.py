@@ -9,9 +9,10 @@ Supports both the legacy single-universe run and a split flow:
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from pipeline import forecast, ingest, infer, portfolio, train, universe
-from pipeline.config import resolve_train_start_date
+from pipeline.config import FORECASTS_DIR, resolve_train_start_date
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -19,7 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--train-universe",
         choices=["default", "mags7", "sp500", "m6"],
-        default="default",
+        default="m6",
         help="Universe used for ingest + training.",
     )
     parser.add_argument(
@@ -46,6 +47,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not force SPY into the candidate inference universe.",
     )
     return parser
+
+
+def _resolve_latest_discovery_date(*, use_full_candidates: bool) -> str | None:
+    prefix = "candidates_" if use_full_candidates else "top_candidates_"
+    discovery_dir = Path(FORECASTS_DIR) / "discovery"
+    if not discovery_dir.exists():
+        return None
+
+    candidates = sorted(discovery_dir.glob(f"{prefix}*.csv"))
+    if not candidates:
+        return None
+
+    latest = candidates[-1].stem
+    return latest.removeprefix(prefix)
+
+
+def _apply_default_run_arguments(args: argparse.Namespace) -> argparse.Namespace:
+    if args.train_universe == "m6" and not args.candidate_file and not args.discovery_date:
+        args.discovery_date = _resolve_latest_discovery_date(
+            use_full_candidates=args.use_full_candidates,
+        )
+    return args
 
 
 def _run_split_inference_flow(args: argparse.Namespace) -> None:
@@ -93,7 +116,7 @@ def _run_legacy_flow(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    args = build_parser().parse_args()
+    args = _apply_default_run_arguments(build_parser().parse_args())
 
     print("=" * 60)
     print("  Stock Ranking Pipeline — Python Refactor")

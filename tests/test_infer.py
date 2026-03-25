@@ -48,8 +48,10 @@ class InferTest(unittest.TestCase):
                                     output_path = infer.run()
 
             submission = pd.read_csv(output_path)
+            template = pd.read_csv(forecasts_dir / "ranked_forecast_template.csv")
 
             self.assertEqual(submission["ID"].tolist(), ["TSLA", "ABBV", "IVV", "META"])
+            self.assertEqual(template["ID"].tolist(), ["TSLA", "ABBV", "IVV", "META"])
             self.assertGreater(float(submission["Decision"].abs().sum()), 0.0)
 
 
