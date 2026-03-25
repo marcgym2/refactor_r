@@ -48,6 +48,50 @@ uv run python discovery_main.py --config config/discovery.toml --date 2026-03-24
 
 The optional news-count source is implemented but disabled by default. Turn it on in `config/discovery.toml` by setting `[sources.news].enabled = true`.
 
+## Running Main On Discovery Candidates
+
+After you have a discovery output, you can run the existing pipeline in two ways.
+
+Legacy reduced-universe mode:
+
+- train and forecast only on the reduced candidate universe
+- useful for quick experiments, but not the preferred setup
+
+```bash
+uv run python main.py --candidate-file forecasts/discovery/top_candidates_2026-03-24.csv
+```
+
+Preferred split mode:
+
+- train on a broader universe
+- then switch to `candidates + SPY` for inference only
+
+For the current lightweight setup, train on `mags7 + SPY` and infer on the discovery output for a given date:
+
+```bash
+uv run python main.py --train-universe mags7 --discovery-date 2026-03-24
+```
+
+Or point directly at a candidate file:
+
+```bash
+uv run python main.py --train-universe mags7 --candidate-file forecasts/discovery/top_candidates_2026-03-24.csv
+```
+
+Limit the inference universe further:
+
+```bash
+uv run python main.py --train-universe mags7 --discovery-date 2026-03-24 --top-k 10
+```
+
+How it works:
+
+- `main.py` first builds the training universe and runs ingest + train
+- if `--train-universe` is not `default` and a discovery candidate input is supplied, the pipeline then rebuilds the universe from `candidates + SPY`
+- the second ingest step refreshes only those candidate names
+- `pipeline/infer.py` uses the saved base model artifacts to score the candidate universe
+- `portfolio.py` then consumes that inference forecast the same way it consumes the legacy forecast output
+
 ## Outputs
 
 Run artifacts are written under `forecasts/discovery` and `data/discovery`:

@@ -70,7 +70,7 @@ def standardize_features(df: pd.DataFrame, feature_names: list[str]) -> pd.DataF
     """Standardize selected features per Interval group."""
     df = df.copy()
     for col in feature_names:
-        df[col] = df.groupby("Interval")[col].transform(standardize)
+        df[col] = df.groupby("Interval", observed=False)[col].transform(standardize)
     return df
 
 
@@ -233,7 +233,7 @@ def gen_stocks_aggr(
 
     # Compute return quintile per interval
     if "Return" in result.columns:
-        result["ReturnQuintile"] = result.groupby("Interval")["Return"].transform(compute_quintile)
+        result["ReturnQuintile"] = result.groupby("Interval", observed=False)["Return"].transform(compute_quintile)
 
     # Parse interval start/end dates
     result["IntervalStart"] = result["Interval"].astype(str).str[:10].apply(
