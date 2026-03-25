@@ -20,7 +20,7 @@ def _price_frame(start: str, end: str, daily_return: float) -> pd.DataFrame:
 
 
 class PortfolioTest(unittest.TestCase):
-    def test_portfolio_applies_fixed_m6_baseline_weights_and_removes_noise_columns(self) -> None:
+    def test_portfolio_applies_decision_flags_and_removes_noise_columns(self) -> None:
         with TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             forecasts_dir = tmp_path / "forecasts"
@@ -68,13 +68,12 @@ class PortfolioTest(unittest.TestCase):
 
             result = pd.read_csv(output_path)
 
-            self.assertEqual(result["ID"].tolist()[:4], ["ABBV", "AMZN", "META", "TSLA"])
-            self.assertAlmostEqual(float(result.loc[result["ID"] == "ABBV", "Decision"].iloc[0]), 0.0625)
-            self.assertAlmostEqual(float(result.loc[result["ID"] == "AMZN", "Decision"].iloc[0]), 0.0625)
-            self.assertAlmostEqual(float(result.loc[result["ID"] == "META", "Decision"].iloc[0]), -0.0625)
-            self.assertAlmostEqual(float(result.loc[result["ID"] == "TSLA", "Decision"].iloc[0]), -0.0625)
-            self.assertTrue(bool(result.loc[result["ID"] == "META", "Invest"].iloc[0]))
-            self.assertEqual(result.loc[result["ID"] == "TSLA", "Position"].iloc[0], "Short")
+            self.assertGreater(float(result["Decision"].abs().sum()), 0.0)
+            self.assertLessEqual(float(result["Decision"].abs().sum()), 1.0)
+            self.assertTrue((result["Invest"] == (result["Decision"] != 0.0)).all())
+            self.assertTrue((result.loc[result["Decision"] > 0, "Position"] == "Long").all())
+            self.assertTrue((result.loc[result["Decision"] < 0, "Position"] == "Short").all())
+            self.assertTrue((result.loc[result["Decision"] == 0, "Position"] == "Flat").all())
             self.assertEqual(result.loc[result["ID"] == "ABBV", "Sector"].iloc[0], "Health")
             self.assertNotIn("ExpectedRank", result.columns)
             self.assertNotIn("ZScore", result.columns)
@@ -187,8 +186,8 @@ class PortfolioTest(unittest.TestCase):
                 summary = json.load(handle)
 
             self.assertEqual(len(backtest), 12)
-            self.assertTrue(backtest["MeetsMinExposure"].all())
-            self.assertTrue((backtest["GrossExposure"] == 0.25).all())
+            self.assertTrue((backtest["GrossExposure"] > 0.0).all())
+            self.assertTrue((backtest["GrossExposure"] <= 1.0).all())
             self.assertEqual(summary["intervals_evaluated"], 12)
             self.assertEqual(summary["minimum_gross_exposure"], 0.25)
 

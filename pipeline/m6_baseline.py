@@ -8,31 +8,55 @@ import pandas as pd
 
 
 RANK_COLUMNS = [f"Rank{i}" for i in range(1, 6)]
-LONG_SELECTION_COUNT = 2
-SHORT_SELECTION_COUNT = 2
-LEG_WEIGHT = 0.0625
+
+# Active strategy parameters.
+LONG_SCORE = "spread"
+SHORT_SCORE = "Rank1"
+LONG_SELECTION_COUNT = 1
+SHORT_SELECTION_COUNT = 0
+TARGET_GROSS_EXPOSURE = 1.0
+LONG_GROSS_SHARE = 1.0
 MIN_GROSS_EXPOSURE = 0.25
+
+
+def _compute_score(frame: pd.DataFrame, metric: str) -> pd.Series:
+    if metric == "spread":
+        return frame["Rank5"] - frame["Rank1"]
+    if metric == "expected_rank":
+        return sum(frame[f"Rank{i}"] * i for i in range(1, 6))
+    if metric == "tail5":
+        return frame["Rank5"] + 0.5 * frame["Rank4"]
+    if metric == "tail1":
+        return frame["Rank1"] + 0.5 * frame["Rank2"]
+    if metric in frame.columns:
+        return frame[metric]
+    raise ValueError(f"Unknown score metric: {metric}")
 
 
 def _select_unique_ids(
     frame: pd.DataFrame,
     *,
-    score_col: str,
+    score: pd.Series,
     count: int,
     exclude_ids: set[str] | None = None,
-    secondary_col: str | None = None,
+    secondary_score: pd.Series | None = None,
 ) -> list[str]:
+    if count <= 0:
+        return []
+
     excluded = exclude_ids or set()
-    columns = ["ID", score_col]
+    ranked = frame.loc[~frame["ID"].isin(excluded), ["ID"]].copy()
+    ranked["PrimaryScore"] = score.loc[ranked.index].astype(float).values
+    sort_columns = ["PrimaryScore"]
     ascending = [False]
 
-    if secondary_col is not None:
-        columns.append(secondary_col)
+    if secondary_score is not None:
+        ranked["SecondaryScore"] = secondary_score.loc[ranked.index].astype(float).values
+        sort_columns.append("SecondaryScore")
         ascending.append(True)
 
-    ranked = frame.loc[~frame["ID"].isin(excluded), columns].copy()
     ranked = ranked.sort_values(
-        by=columns[1:] + ["ID"],
+        by=sort_columns + ["ID"],
         ascending=ascending + [True],
         kind="mergesort",
     )
@@ -50,23 +74,29 @@ def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, d
     for column in RANK_COLUMNS:
         baseline[column] = baseline[column].astype(float)
 
+    long_score = _compute_score(baseline, LONG_SCORE)
+    short_score = _compute_score(baseline, SHORT_SCORE)
     long_ids = _select_unique_ids(
         baseline,
-        score_col="Rank5",
+        score=long_score,
         count=LONG_SELECTION_COUNT,
-        secondary_col="Rank1",
+        secondary_score=short_score,
     )
     short_ids = _select_unique_ids(
         baseline,
-        score_col="Rank1",
+        score=short_score,
         count=SHORT_SELECTION_COUNT,
         exclude_ids=set(long_ids),
-        secondary_col="Rank5",
+        secondary_score=long_score,
     )
 
     baseline["Decision"] = 0.0
-    baseline.loc[baseline["ID"].isin(long_ids), "Decision"] = LEG_WEIGHT
-    baseline.loc[baseline["ID"].isin(short_ids), "Decision"] = -LEG_WEIGHT
+    long_gross = TARGET_GROSS_EXPOSURE if SHORT_SELECTION_COUNT == 0 else TARGET_GROSS_EXPOSURE * LONG_GROSS_SHARE
+    short_gross = 0.0 if SHORT_SELECTION_COUNT == 0 else TARGET_GROSS_EXPOSURE - long_gross
+    if long_ids:
+        baseline.loc[baseline["ID"].isin(long_ids), "Decision"] = long_gross / float(len(long_ids))
+    if short_ids and short_gross > 0.0:
+        baseline.loc[baseline["ID"].isin(short_ids), "Decision"] = -short_gross / float(len(short_ids))
 
     baseline["Position"] = "Flat"
     baseline.loc[baseline["Decision"] > 0, "Position"] = "Long"
@@ -75,6 +105,8 @@ def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, d
 
     gross_exposure = float(baseline["Decision"].abs().sum())
     summary = {
+        "long_score": LONG_SCORE,
+        "short_score": SHORT_SCORE,
         "long_ids": long_ids,
         "short_ids": short_ids,
         "gross_exposure": gross_exposure,
