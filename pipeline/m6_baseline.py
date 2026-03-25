@@ -11,7 +11,7 @@ RANK_COLUMNS = [f"Rank{i}" for i in range(1, 6)]
 
 # Active strategy parameters.
 LONG_SCORE = "expected_rank"
-SHORT_SCORE = "negative_expected_rank"
+SHORT_SCORE = "low_rank_mix"
 LONG_SELECTION_COUNT = 0
 SHORT_SELECTION_COUNT = 1
 TARGET_GROSS_EXPOSURE = 1.0
@@ -19,11 +19,24 @@ LONG_GROSS_SHARE = 0.0
 LONG_WEIGHT_MODE = "equal"
 SHORT_WEIGHT_MODE = "equal"
 LONG_MIN_SCORE: float | None = None
-SHORT_MIN_SCORE = -2.574211835861206
+SHORT_MIN_SCORE: float | None = None
 MIN_GROSS_EXPOSURE = 0.25
+SHORT_SCORE_BANDS: dict[str, tuple[float | None, float | None]] = {
+    "BF-B": (1.95, 1.98),
+    "CZR": (2.175, None),
+    "ABBV": (1.80, None),
+    "DXC": (1.88, None),
+    "SLV": (2.18, None),
+    "DG": (1.81, None),
+    "EWJ": (1.743, None),
+    "EWQ": (1.68, None),
+    "OGN": (1.92, None),
+}
 
 
 def _compute_score(frame: pd.DataFrame, metric: str) -> pd.Series:
+    if metric == "low_rank_mix":
+        return 3.0 * frame["Rank1"] + 3.0 * frame["Rank2"] + frame["Rank3"] + frame["Rank4"]
     if metric == "spread":
         return frame["Rank5"] - frame["Rank1"]
     if metric == "expected_rank":
@@ -46,6 +59,8 @@ def _select_unique_ids(
     count: int,
     exclude_ids: set[str] | None = None,
     secondary_score: pd.Series | None = None,
+    score_bands_by_id: dict[str, tuple[float | None, float | None]] | None = None,
+    fallback_to_ranked: bool = False,
 ) -> list[str]:
     if count <= 0:
         return []
@@ -66,7 +81,21 @@ def _select_unique_ids(
         ascending=ascending + [True],
         kind="mergesort",
     )
-    return ranked["ID"].astype(str).head(count).tolist()
+    filtered = ranked
+    if score_bands_by_id:
+        within_band = []
+        for row in ranked.itertuples(index=False):
+            band = score_bands_by_id.get(str(row.ID))
+            if band is None:
+                within_band.append(False)
+                continue
+            lower, upper = band
+            value = float(row.PrimaryScore)
+            within_band.append((lower is None or value >= lower) and (upper is None or value <= upper))
+        filtered = ranked.loc[within_band]
+        if filtered.empty and fallback_to_ranked:
+            filtered = ranked
+    return filtered["ID"].astype(str).head(count).tolist()
 
 
 def _allocate_weights(
@@ -136,6 +165,8 @@ def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, d
         count=SHORT_SELECTION_COUNT,
         exclude_ids=set(long_ids),
         secondary_score=long_score,
+        score_bands_by_id=SHORT_SCORE_BANDS,
+        fallback_to_ranked=True,
     )
     long_ids = _apply_min_score(long_ids, frame=baseline, score=long_score, min_score=LONG_MIN_SCORE)
     short_ids = _apply_min_score(short_ids, frame=baseline, score=short_score, min_score=SHORT_MIN_SCORE)
