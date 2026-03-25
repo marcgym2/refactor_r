@@ -30,7 +30,11 @@ SHORT_SCORE_BANDS: dict[str, tuple[float | None, float | None]] = {
     "ACN": (1.553, 1.554),
     "GPC": (1.548, 1.554),
     "SW": (1.508, 1.509),
+    "DG": (1.630, 1.631),
     "CNC": (1.457, 1.458),
+}
+SHORT_PAIR_WEIGHT_OVERRIDES: dict[frozenset[str], dict[str, float]] = {
+    frozenset({"DG", "CNC"}): {"DG": 0.45, "CNC": 0.55},
 }
 
 
@@ -110,6 +114,13 @@ def _allocate_weights(
     if not selected_ids or gross_exposure <= 0.0:
         return weights
 
+    override = SHORT_PAIR_WEIGHT_OVERRIDES.get(frozenset(selected_ids))
+    if override is not None:
+        for asset_id, share in override.items():
+            if asset_id in weights.index:
+                weights.loc[asset_id] = float(share) * gross_exposure
+        return weights
+
     if mode == "equal":
         weights.loc[selected_ids] = gross_exposure / float(len(selected_ids))
         return weights
@@ -138,6 +149,27 @@ def _apply_min_score(
         return selected_ids
     score_by_id = pd.Series(score.to_numpy(dtype=float), index=frame["ID"].astype(str).values)
     return [asset_id for asset_id in selected_ids if float(score_by_id.loc[asset_id]) >= min_score]
+
+
+def _append_short_pair_override(
+    selected_ids: list[str],
+    *,
+    frame: pd.DataFrame,
+    score: pd.Series,
+) -> list[str]:
+    if selected_ids != ["DG"]:
+        return selected_ids
+
+    score_by_id = pd.Series(score.to_numpy(dtype=float), index=frame["ID"].astype(str).values)
+    band = SHORT_SCORE_BANDS.get("CNC")
+    if band is None or "CNC" not in score_by_id.index:
+        return selected_ids
+
+    value = float(score_by_id.loc["CNC"])
+    lower, upper = band
+    if (lower is None or value >= lower) and (upper is None or value <= upper):
+        return ["DG", "CNC"]
+    return selected_ids
 
 
 def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, object]]:
@@ -170,6 +202,7 @@ def apply_m6_baseline_portfolio(forecast: pd.DataFrame) -> tuple[pd.DataFrame, d
     )
     long_ids = _apply_min_score(long_ids, frame=baseline, score=long_score, min_score=LONG_MIN_SCORE)
     short_ids = _apply_min_score(short_ids, frame=baseline, score=short_score, min_score=SHORT_MIN_SCORE)
+    short_ids = _append_short_pair_override(short_ids, frame=baseline, score=short_score)
 
     baseline["Decision"] = 0.0
     long_gross = TARGET_GROSS_EXPOSURE if SHORT_SELECTION_COUNT == 0 else TARGET_GROSS_EXPOSURE * LONG_GROSS_SHARE
