@@ -256,7 +256,7 @@ def run() -> None:
     allow_meta_structure = OrderedDict()
     n_layers = len(base_model.layers)
     included_keys = set()
-    for li in range(max(0, n_layers - 1), n_layers):
+    for li in range(max(0, n_layers - 2), n_layers):
         included_keys.add(f"layers.{li}.weight")
         included_keys.add(f"layers.{li}.bias")
 
