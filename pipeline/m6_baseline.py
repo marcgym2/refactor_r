@@ -12,10 +12,10 @@ RANK_COLUMNS = [f"Rank{i}" for i in range(1, 6)]
 # Active strategy parameters.
 LONG_SCORE = "expected_rank"
 SHORT_SCORE = "negative_expected_rank"
-LONG_SELECTION_COUNT = 3
+LONG_SELECTION_COUNT = 0
 SHORT_SELECTION_COUNT = 1
 TARGET_GROSS_EXPOSURE = 1.0
-LONG_GROSS_SHARE = 0.9
+LONG_GROSS_SHARE = 0.0
 LONG_WEIGHT_MODE = "equal"
 SHORT_WEIGHT_MODE = "equal"
 MIN_GROSS_EXPOSURE = 0.25
