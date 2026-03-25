@@ -10,9 +10,9 @@ import pandas as pd
 RANK_COLUMNS = [f"Rank{i}" for i in range(1, 6)]
 
 # Active strategy parameters.
-LONG_SCORE = "spread"
+LONG_SCORE = "expected_rank"
 SHORT_SCORE = "Rank1"
-LONG_SELECTION_COUNT = 1
+LONG_SELECTION_COUNT = 2
 SHORT_SELECTION_COUNT = 0
 TARGET_GROSS_EXPOSURE = 1.0
 LONG_GROSS_SHARE = 1.0
