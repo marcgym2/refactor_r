@@ -1,0 +1,148 @@
+{
+  "raw_feature_shape": [
+    22100,
+    79
+  ],
+  "standardized_feature_shape": [
+    22100,
+    79
+  ],
+  "comparison_frame_shape": [
+    5600,
+    79
+  ],
+  "comparison_protocol": {
+    "reason": "Use Shift == 0 only to avoid cross-shift overlapping interval leakage and to match live inference.",
+    "rows": 5600,
+    "tickers": 100,
+    "intervals": 56,
+    "feature_count": 67
+  },
+  "split_summary": {
+    "train_rows": 4400,
+    "dev_rows": 600,
+    "test_rows": 600,
+    "train_intervals": 44,
+    "dev_intervals": 6,
+    "test_intervals": 6,
+    "train_start": "2021-12-09",
+    "train_end": "2025-04-23",
+    "dev_start": "2025-04-24",
+    "dev_end": "2025-10-08",
+    "test_start": "2025-10-09",
+    "test_end": "2026-03-25"
+  },
+  "class_distribution": {
+    "full_comparison_frame": {
+      "1": 1120,
+      "2": 1120,
+      "3": 1120,
+      "4": 1120,
+      "5": 1120
+    },
+    "train": {
+      "1": 880,
+      "2": 880,
+      "3": 880,
+      "4": 880,
+      "5": 880
+    },
+    "dev": {
+      "1": 120,
+      "2": 120,
+      "3": 120,
+      "4": 120,
+      "5": 120
+    },
+    "test": {
+      "1": 120,
+      "2": 120,
+      "3": 120,
+      "4": 120,
+      "5": 120
+    }
+  },
+  "nulls": {
+    "raw_total_nulls": 63275,
+    "standardized_total_nulls": 0,
+    "comparison_total_nulls": 0,
+    "raw_top_null_feature_columns": {
+      "SNR_n=60": 2900,
+      "VolatilityLag7": 2800,
+      "ReturnLag7": 2800,
+      "runPercentRank": 2410,
+      "VolatilityLag6": 2400,
+      "ReturnLag6": 2400,
+      "ReturnLag5": 2000,
+      "VolatilityLag5": 2000,
+      "VolatilityLag4": 1600,
+      "ReturnLag4": 1600,
+      "TRIX1_TRIX": 1300,
+      "SNR_n=20": 1200,
+      "ReturnLag3": 1200,
+      "VolatilityLag3": 1200,
+      "chaikinAD": 1160
+    },
+    "comparison_top_null_feature_columns": {}
+  },
+  "duplicate_keys": {
+    "raw_interval_ticker_shift_duplicates": 0,
+    "comparison_interval_ticker_duplicates": 0
+  },
+  "leakage_risks": {
+    "full_frame_cross_shift_overlap_pairs": 657,
+    "full_frame_cross_shift_overlap_examples": [
+      {
+        "left_shift": 0,
+        "left_start": "2021-12-09",
+        "left_end": "2022-01-05",
+        "right_shift": 21,
+        "right_start": "2021-12-16",
+        "right_end": "2022-01-12"
+      },
+      {
+        "left_shift": 0,
+        "left_start": "2021-12-09",
+        "left_end": "2022-01-05",
+        "right_shift": 14,
+        "right_start": "2021-12-23",
+        "right_end": "2022-01-19"
+      },
+      {
+        "left_shift": 0,
+        "left_start": "2021-12-09",
+        "left_end": "2022-01-05",
+        "right_shift": 7,
+        "right_start": "2021-12-30",
+        "right_end": "2022-01-26"
+      },
+      {
+        "left_shift": 21,
+        "left_start": "2021-12-16",
+        "left_end": "2022-01-12",
+        "right_shift": 14,
+        "right_start": "2021-12-23",
+        "right_end": "2022-01-19"
+      },
+      {
+        "left_shift": 21,
+        "left_start": "2021-12-16",
+        "left_end": "2022-01-12",
+        "right_shift": 7,
+        "right_start": "2021-12-30",
+        "right_end": "2022-01-26"
+      }
+    ],
+    "comparison_train_dev_interval_overlaps": 0,
+    "comparison_train_test_interval_overlaps": 0,
+    "comparison_dev_test_interval_overlaps": 0,
+    "forbidden_feature_columns_present": [],
+    "non_lag_return_feature_columns": [],
+    "feature_engineering_guards": [
+      "Return is excluded from model inputs and kept only as target metadata.",
+      "TargetRank1..5 and ReturnQuintile are excluded from model inputs.",
+      "Technical indicators in pipeline/features.py are shifted by one interval in ttr_wrapper().",
+      "Lagged returns and lagged volatility use prior intervals only."
+    ]
+  }
+}

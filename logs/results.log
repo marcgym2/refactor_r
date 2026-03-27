@@ -1,0 +1,73 @@
+# Quintile Model Comparison
+
+feature_count: 67
+train_rows: 4400
+dev_rows: 600
+test_rows: 600
+candidate_devices: ['mps', 'cpu']
+## Baseline FFNN
+accuracy: 0.296667
+macro_f1: 0.236917
+train_seconds: 0.1834
+predict_seconds: 0.0003
+device: cpu
+f1_class_1: 0.432304
+f1_class_2: 0.325879
+f1_class_3: 0.192090
+f1_class_4: 0.218182
+f1_class_5: 0.016129
+best_dev_epoch: 6
+best_dev_loss: 0.15390512347221375
+best_test_loss: 0.15643195807933807
+model_name: baseline_ffnn
+n_test_rows: 600
+n_train_rows: 4400
+confusion_matrix:
+class_1: [91, 21, 2, 4, 2]
+class_2: [43, 51, 18, 7, 1]
+class_3: [41, 53, 17, 9, 0]
+class_4: [42, 45, 15, 18, 0]
+class_5: [84, 23, 5, 7, 1]
+## TabICL v2
+accuracy: 0.301667
+macro_f1: 0.288576
+train_seconds: 0.5987
+predict_seconds: 117.0087
+device: cpu
+f1_class_1: 0.351648
+f1_class_2: 0.253521
+f1_class_3: 0.351145
+f1_class_4: 0.152047
+f1_class_5: 0.334520
+checkpoint_version: tabicl-classifier-v2-20260212.ckpt
+model_name: tabicl_v2
+n_test_rows: 600
+n_train_rows: 4400
+confusion_matrix:
+class_1: [48, 10, 10, 3, 49]
+class_2: [19, 27, 34, 15, 25]
+class_3: [22, 21, 46, 14, 17]
+class_4: [23, 23, 38, 13, 23]
+class_5: [41, 12, 14, 6, 47]
+## TabPFN v2
+accuracy: 0.286667
+macro_f1: 0.242250
+train_seconds: 0.4272
+predict_seconds: 404.1062
+device: cpu
+f1_class_1: 0.344322
+f1_class_2: 0.129412
+f1_class_3: 0.395210
+f1_class_4: 0.031496
+f1_class_5: 0.310811
+fit_mode: low_memory
+ignore_pretraining_limits: True
+model_name: tabpfn_v2
+n_test_rows: 600
+n_train_rows: 4400
+confusion_matrix:
+class_1: [47, 5, 14, 2, 52]
+class_2: [15, 11, 60, 1, 33]
+class_3: [24, 10, 66, 2, 18]
+class_4: [23, 15, 53, 2, 27]
+class_5: [44, 9, 21, 0, 46]
