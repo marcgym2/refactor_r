@@ -2,7 +2,7 @@
 
 ## Winner
 Winner: **tabicl_v2** with macro F1 `0.288576` and accuracy `0.301667`.
-It beat `tabpfn_v2` by `0.046326` macro F1 on the held-out test split.
+It beat `catboost` by `0.034178` macro F1 on the held-out test split.
 
 ## Why This Protocol
 The full feature table contains four shift variants of 28-day windows, and those windows overlap heavily in calendar time.
@@ -20,6 +20,7 @@ The baseline is the current live FFNN architecture retrained with the repo's exi
 ## Final Table
    model_name  accuracy  macro_f1  train_seconds  predict_seconds device  f1_class_1  f1_class_2  f1_class_3  f1_class_4  f1_class_5
     tabicl_v2  0.301667  0.288576       0.598714       117.008653    cpu    0.351648    0.253521    0.351145    0.152047    0.334520
+     catboost  0.266667  0.254398       1.562300         0.000600    cpu    0.355072    0.213904    0.283784    0.129032    0.290196
     tabpfn_v2  0.286667  0.242250       0.427213       404.106188    cpu    0.344322    0.129412    0.395210    0.031496    0.310811
 baseline_ffnn  0.296667  0.236917       0.183449         0.000250    cpu    0.432304    0.325879    0.192090    0.218182    0.016129
 
@@ -30,4 +31,4 @@ Accuracy is included as a secondary metric, but macro F1 gets priority because t
 
 ## Caveats
 - The original all-shifts table is leaky for naive split-based evaluation because shifted windows overlap in time.
-- The baseline dev split is used for early stopping; challengers are zero-shot / fixed-default models and do not use that split for tuning.
+- The baseline FFNN and CatBoost use the dev split for early stopping; TabICL v2 and TabPFN v2 run with fixed defaults and do not tune on that split.

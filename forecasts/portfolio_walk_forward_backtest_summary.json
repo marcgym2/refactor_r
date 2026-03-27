@@ -1,0 +1,50 @@
+{
+  "config": {
+    "evaluation_shift": 0,
+    "train_window_years": 3.0,
+    "min_history_intervals": 96,
+    "retrain_every": 3,
+    "train_fraction": 0.7,
+    "test_fraction": 0.15,
+    "base_epochs": 40,
+    "base_minibatch": 200,
+    "base_patience": 4,
+    "base_lr": [
+      0.01
+    ],
+    "meta_epochs": 25,
+    "meta_patience": 5,
+    "meta_lr": [
+      0.01,
+      0.001,
+      0.0005
+    ],
+    "meta_minibatch_size": 4,
+    "warm_start": true
+  },
+  "elapsed_seconds": 40.8825,
+  "models": {
+    "base": {
+      "intervals": 31,
+      "annualized_return": 0.13304839734714746,
+      "cumulative_return": 0.34588297244174004,
+      "average_period_return": 0.01001863251087313,
+      "positive_periods": 19,
+      "start": "2023-11-11",
+      "end": "2026-03-27",
+      "min_period_return": -0.04093422650531331,
+      "max_period_return": 0.11447592344796509
+    },
+    "meta": {
+      "intervals": 31,
+      "annualized_return": -0.026982677329565274,
+      "cumulative_return": -0.06297809403844135,
+      "average_period_return": -0.0016112650908957763,
+      "positive_periods": 16,
+      "start": "2023-11-11",
+      "end": "2026-03-27",
+      "min_period_return": -0.09621524203193177,
+      "max_period_return": 0.05680783941262013
+    }
+  }
+}

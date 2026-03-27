@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pipeline import forecast, ingest, infer, portfolio, train, universe
+from pipeline import forecast, infer_tabicl as infer, ingest, portfolio, train, universe
 from pipeline.config import FORECASTS_DIR, resolve_train_start_date
 from pipeline.discovery.runner import run as run_discovery
 

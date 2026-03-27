@@ -8,8 +8,8 @@ candidate_devices: ['mps', 'cpu']
 ## Baseline FFNN
 accuracy: 0.296667
 macro_f1: 0.236917
-train_seconds: 0.1834
-predict_seconds: 0.0003
+train_seconds: 0.1411
+predict_seconds: 0.0001
 device: cpu
 f1_class_1: 0.432304
 f1_class_2: 0.325879
@@ -28,11 +28,33 @@ class_2: [43, 51, 18, 7, 1]
 class_3: [41, 53, 17, 9, 0]
 class_4: [42, 45, 15, 18, 0]
 class_5: [84, 23, 5, 7, 1]
+## CatBoost
+accuracy: 0.266667
+macro_f1: 0.254398
+train_seconds: 1.5623
+predict_seconds: 0.0006
+device: cpu
+f1_class_1: 0.355072
+f1_class_2: 0.213904
+f1_class_3: 0.283784
+f1_class_4: 0.129032
+f1_class_5: 0.290196
+best_dev_score: 0.2917927629079786
+best_iteration: 91
+model_name: catboost
+n_test_rows: 600
+n_train_rows: 4400
+confusion_matrix:
+class_1: [49, 9, 12, 11, 39]
+class_2: [17, 20, 47, 13, 23]
+class_3: [21, 20, 42, 24, 13]
+class_4: [21, 12, 52, 12, 23]
+class_5: [48, 6, 23, 6, 37]
 ## TabICL v2
 accuracy: 0.301667
 macro_f1: 0.288576
-train_seconds: 0.5987
-predict_seconds: 117.0087
+train_seconds: 0.8244
+predict_seconds: 110.3431
 device: cpu
 f1_class_1: 0.351648
 f1_class_2: 0.253521

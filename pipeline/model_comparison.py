@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
+from catboost import CatBoostClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from tabicl import TabICLClassifier
 from tabpfn import TabPFNClassifier
@@ -496,6 +497,55 @@ def _run_tabicl(
     return _run_with_device_fallback(model_name="TabICL v2", runner=_runner)
 
 
+def _run_catboost(
+    *,
+    splits: SplitBundle,
+    feature_names: list[str],
+) -> dict[str, object]:
+    _seed_everything()
+    x_train, y_train = _prepare_xy(splits.train, feature_names)
+    x_dev, y_dev = _prepare_xy(splits.dev, feature_names)
+    x_test, _ = _prepare_xy(splits.test, feature_names)
+    y_test = splits.test["ReturnQuintile"].to_numpy(dtype=int)
+
+    model = CatBoostClassifier(
+        loss_function="MultiClass",
+        eval_metric="TotalF1:average=Macro",
+        random_seed=RANDOM_SEED,
+        iterations=1000,
+        verbose=False,
+        allow_writing_files=False,
+        use_best_model=True,
+        od_type="Iter",
+        od_wait=50,
+    )
+
+    train_started = time.time()
+    model.fit(x_train, y_train, eval_set=(x_dev, y_dev), verbose=False)
+    train_seconds = time.time() - train_started
+
+    predict_started = time.time()
+    probs = model.predict_proba(x_test)
+    predict_seconds = time.time() - predict_started
+
+    y_pred = probs.argmax(axis=1) + 1
+    metrics = _compute_metrics(
+        y_true=y_test,
+        y_pred=y_pred.astype(int),
+        train_seconds=train_seconds,
+        predict_seconds=predict_seconds,
+        device="cpu",
+        details={
+            "model_name": "catboost",
+            "best_iteration": int(model.get_best_iteration()),
+            "best_dev_score": float(model.get_best_score()["validation"]["TotalF1:average=Macro"]),
+            "n_train_rows": int(len(splits.train)),
+            "n_test_rows": int(len(splits.test)),
+        },
+    )
+    return metrics
+
+
 def _run_tabpfn(
     *,
     splits: SplitBundle,
@@ -658,7 +708,7 @@ def _build_report(
             "",
             "## Caveats",
             "- The original all-shifts table is leaky for naive split-based evaluation because shifted windows overlap in time.",
-            "- The baseline dev split is used for early stopping; challengers are zero-shot / fixed-default models and do not use that split for tuning.",
+            "- The baseline FFNN and CatBoost use the dev split for early stopping; TabICL v2 and TabPFN v2 run with fixed defaults and do not tune on that split.",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -702,6 +752,10 @@ def run() -> pd.DataFrame:
     baseline_metrics = _run_baseline(splits=splits, feature_names=feature_names)
     results.append(baseline_metrics)
     _append_text(RESULTS_LOG, _results_section("Baseline FFNN", baseline_metrics))
+
+    catboost_metrics = _run_catboost(splits=splits, feature_names=feature_names)
+    results.append(catboost_metrics)
+    _append_text(RESULTS_LOG, _results_section("CatBoost", catboost_metrics))
 
     tabicl_metrics = _run_tabicl(splits=splits, feature_names=feature_names)
     results.append(tabicl_metrics)

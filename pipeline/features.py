@@ -40,22 +40,39 @@ def last_num(x: pd.Series) -> float | None:
 
 def compute_return(df: pd.DataFrame, ticker: str) -> pd.DataFrame:
     """Per-interval return = last(Adjusted) / first(Adjusted) - 1."""
-    return df.groupby("Interval", observed=True).apply(
-        lambda g: pd.Series({"Return": last_num(g["Adjusted"]) / first_num(g["Adjusted"]) - 1
-                              if first_num(g["Adjusted"]) else np.nan}),
-        include_groups=False,
-    ).reset_index()
+    def _series_return(adj: pd.Series) -> float:
+        first = first_num(adj)
+        last = last_num(adj)
+        if not np.isfinite(first) or first == 0:
+            return np.nan
+        return float(last / first - 1)
+
+    return (
+        df.groupby("Interval", observed=True)["Adjusted"]
+        .apply(_series_return)
+        .rename("Return")
+        .reset_index()
+    )
 
 
 def lag_return(df: pd.DataFrame, ticker: str, lags: list[int] | None = None) -> pd.DataFrame:
     """Lagged interval returns."""
     if lags is None:
         lags = list(range(1, 8))
-    ret = df.groupby("Interval", observed=True).apply(
-        lambda g: pd.Series({"_ret": last_num(g["Adjusted"]) / first_num(g["Adjusted"]) - 1
-                              if first_num(g["Adjusted"]) else np.nan}),
-        include_groups=False,
-    ).reset_index()
+
+    def _series_return(adj: pd.Series) -> float:
+        first = first_num(adj)
+        last = last_num(adj)
+        if not np.isfinite(first) or first == 0:
+            return np.nan
+        return float(last / first - 1)
+
+    ret = (
+        df.groupby("Interval", observed=True)["Adjusted"]
+        .apply(_series_return)
+        .rename("_ret")
+        .reset_index()
+    )
     for lag in lags:
         ret[f"ReturnLag{lag}"] = ret["_ret"].shift(lag)
     ret = ret.drop(columns=["_ret"])
@@ -67,15 +84,21 @@ def lag_volatility(df: pd.DataFrame, ticker: str, lags: list[int] | None = None)
     if lags is None:
         lags = list(range(1, 8))
 
-    def _vol(g: pd.DataFrame) -> float:
-        adj = g["Adjusted"].dropna()
+    def _series_vol(adj: pd.Series) -> float:
+        adj = adj.dropna()
         if len(adj) < 2:
             return np.nan
-        lr = np.diff(np.log(adj.values))
+        lr = np.diff(np.log(adj.to_numpy(dtype=float)))
         return float(np.mean(lr ** 2))
 
-    vol = df.groupby("Interval", observed=True).apply(_vol, include_groups=False).reset_index()
-    vol.columns = ["Interval", "_vol"]
+    # Group directly on the Adjusted series; this is more robust across pandas
+    # versions than DataFrame-level groupby.apply() for scalar outputs.
+    vol = (
+        df.groupby("Interval", observed=True)["Adjusted"]
+        .apply(_series_vol)
+        .rename("_vol")
+        .reset_index()
+    )
     for lag in lags:
         vol[f"VolatilityLag{lag}"] = vol["_vol"].shift(lag)
     vol = vol.drop(columns=["_vol"])

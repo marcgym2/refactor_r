@@ -1,0 +1,65 @@
+{
+  "config": {
+    "evaluation_shift": 0,
+    "train_window_years": 3.0,
+    "min_history_intervals": 96,
+    "retrain_every": 3,
+    "train_fraction": 0.7,
+    "test_fraction": 0.15,
+    "base_epochs": 40,
+    "base_minibatch": 200,
+    "base_patience": 4,
+    "base_lr": [
+      0.01
+    ],
+    "meta_epochs": 25,
+    "meta_patience": 5,
+    "meta_lr": [
+      0.01,
+      0.001,
+      0.0005
+    ],
+    "meta_minibatch_size": 4,
+    "warm_start": true
+  },
+  "elapsed_seconds": 167.223,
+  "models": {
+    "catboost": {
+      "intervals": 31,
+      "annualized_return": 0.0374869627563883,
+      "cumulative_return": 0.09146056882603948,
+      "average_period_return": 0.003968425622257614,
+      "positive_periods": 19,
+      "start": "2023-11-11",
+      "end": "2026-03-27",
+      "min_period_return": -0.09889093948826666,
+      "max_period_return": 0.15167602126432422,
+      "average_gross_exposure": 0.7594739680743319,
+      "retraining_events": 11
+    }
+  },
+  "baseline_reference": {
+    "base": {
+      "intervals": 109,
+      "annualized_return": 0.16851307025135598,
+      "cumulative_return": 2.677289835430049,
+      "average_period_return": 0.014624925531508773,
+      "positive_periods": 65,
+      "start": "2017-11-16",
+      "end": "2026-03-25",
+      "min_period_return": -0.19809903256252082,
+      "max_period_return": 0.4617957122449474
+    },
+    "meta": {
+      "intervals": 109,
+      "annualized_return": 0.13835563402639872,
+      "cumulative_return": 1.9551278062203932,
+      "average_period_return": 0.012260367994741426,
+      "positive_periods": 65,
+      "start": "2017-11-16",
+      "end": "2026-03-25",
+      "min_period_return": -0.18376892431489522,
+      "max_period_return": 0.20722862335654413
+    }
+  }
+}
